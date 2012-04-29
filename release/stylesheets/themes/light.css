@@ -1,0 +1,27 @@
+
+body.palm-default {
+ background: url(../../images/gradient-background-light.png) center center repeat;
+ background-attachment:fixed;
+ -webkit-background-size: 100% 100%;
+}
+
+.thing {
+  background: url(../../images/squared5-light.png) center center repeat;
+  font-size: 15px;
+  background-color: white;
+  color: black;
+  padding: 18px;
+  margin: 3px 6px 3px 6px;
+  /*margin: 6px;*/
+  -webkit-border-radius: 6px;
+  overflow: auto;
+}
+
+.description {
+  font-size: 0.8em;
+  color: grey;
+  margin-top: 6px;
+  float: left;
+  clear: both;
+}
+

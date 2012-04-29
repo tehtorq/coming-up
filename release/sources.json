@@ -1,0 +1,25 @@
+[
+    {"source": "app/models/metrix.js"},
+    {"source": "app/models/asyncWrappers.js"},
+    {"source": "app/lib/utils.js"},
+    {"source": "app/lib/underscore-min.js"},
+    {"source": "app/lib/date.js"},
+		{"source": "app/models/request.js"},
+		{"source": "app/models/preferences.js"},
+		{"source": "app/models/banner.js"},
+    {"source": "app/assistants/base-assistant.js"},
+    {"source": "app/assistants/power-scroll-base.js"},
+    {"source": "app/assistants/app-assistant.js"},
+    {
+        "scenes": "coming-up",
+        "source": "app/assistants/coming-up-assistant.js"
+    },
+    {
+        "scenes": "prefs",
+        "source": "app/assistants/prefs-assistant.js"
+    },
+    {
+        "scenes": "about",
+        "source": "app/assistants/about-assistant.js"
+    }
+]

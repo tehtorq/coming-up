@@ -1,0 +1,2 @@
+class PrefsAssistant extends BaseAssistant
+  

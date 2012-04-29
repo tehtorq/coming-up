@@ -1,0 +1,136 @@
+
+#horizontally-scrolled-container {
+  width: 964px; 
+  height: 380px;
+  margin: 0px;
+  padding: 0px;
+}
+
+.scrollerItem {
+  float: left;
+  width: 320px;
+  height: 380px;
+  /*border: yellow solid 1px;*/
+  margin: 0px;
+  padding: 0px;
+}
+
+.palm-scrim {
+  opacity: 0;
+  -webkit-background-size: 0% 0%;
+}
+
+body.palm-default {
+  margin: 0px;
+  padding: 0px;
+  background-color: black;
+  color: white;
+  font-size: 15px;
+}
+
+#header-bar {
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  height: 45px;
+  width: 100%;
+  background-color: black;
+  text-align: center;
+  color: gray;
+  margin: 0px;
+  padding: 0px;
+  padding-top: 5px;
+  font-size: 35px;
+}
+
+#footer-bar {
+  position: absolute;
+  left: 0px;
+  bottom: 0px;
+  height: 45px;
+  width: 100%;
+  background-color: blue;
+  text-align: center;
+  color: gray;
+  margin: 0px;
+  padding: 0px;
+  padding-top: 15px;
+  font-size: 15px;
+}
+
+#content-area {
+  position: absolute;
+  left: 0px;
+  top: 50px;
+  width: 100%;
+  background-color: black;
+  /*border: 1px solid white;*/
+  margin: 0px;
+  padding: 0px;
+}
+
+.thing {
+  font-size: 16px;
+  background-color: black;
+  color: white;
+  padding: 0px 0px 0px 3px;
+  margin: 0px;
+  overflow: auto;
+  border-bottom: 1px solid #222222;
+  height: 48px;
+  -webkit-transition-property: height;
+  -webkit-transition-duration: 1s;
+  -webkit-transition-timing-function: 'ease-out';
+}
+
+.priority {
+  border-left: 3px solid yellow !important;
+  padding: 0px 0px 0px 0px !important;
+}
+
+.selected {
+  height: 96px;
+  /*border: 1px solid white;*/
+}
+
+.event-holder {
+  height: 36px;
+  width: 100%;
+  padding: 0px;
+  padding-top: 8px;
+  /*border: 1px solid blue;*/
+  margin: 6px;
+}
+
+.event-options {
+  height: 36px;
+  width: 100%;
+  /*border: 1px solid red;*/
+  padding: 0px;
+  margin: 6px;
+}
+
+.event-option {
+  float: left;
+  font-size: small;
+  text-align: center;
+  width: 20%;
+  height: 36px;
+  /*border: 1px solid yellow;*/
+  padding: 0px;
+  margin: 0px;
+  padding-top: 9px;
+}
+
+.description {
+  font-size: small;
+  color: gray;
+  margin-top: 6px;
+  float: left;
+  clear: both;
+}
+
+.section-heading {
+  font-size: 30px !important;
+  color: gray !important;
+}

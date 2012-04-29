@@ -1,0 +1,24 @@
+{
+  "uiRevision": "2",
+	"id": "com.tehtorq.coming-up",
+	"version": "0.0.1",
+	"vendor": "tehtorq",
+	"type": "web",
+	"main": "index.html",
+  "dockMode": true,
+  "touchstoneMode": "enabled",
+	"title": "Coming Up",
+	"icon": "icon.png",
+	"noWindow": true,
+  "splashicon": "images/splash-small.png",
+	"splashBackground": "images/splash.png",
+  "noDeprecatedStyles":true,
+  "universalSearch":{
+      "action" :  {
+          "displayName": "Coming Up",
+          "url":"com.tehtorq.coming-up",
+          "launchParam":"searchString"
+      }
+  },
+  "keywords": ["reminders"]
+}

@@ -1,0 +1,2 @@
+class AboutAssistant extends BaseAssistant
+  

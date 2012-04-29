@@ -1,0 +1,93 @@
+
+  <div class="palm-group">
+    <div class="palm-group-title">General</div>
+    
+    <div class="palm-list">
+
+       <div class='palm-row first'>
+         <div class="palm-row-wrapper"> 	
+           <div x-mojo-element="ToggleButton" id="hide_thumbnail_toggle_button"></div>
+           <div class="label left">Hide thumbnails</div>
+         </div>
+       </div>
+
+       <div class='palm-row'>
+          <div class="palm-row-wrapper">
+            <div x-mojo-element="ToggleButton" id="hide_easylinks_toggle_button"></div>
+            <div class="label left">Show easy links</div>
+          </div>
+       </div>
+
+       <div class='palm-row'>
+          <div class="palm-row-wrapper">
+            <div x-mojo-element="ToggleButton" id="samecard_toggle_button"></div>
+            <div class="label left">Single card</div>
+          </div>
+       </div>
+      
+       <div class='palm-row'>
+          <div class="palm-row-wrapper">
+            <div x-mojo-element="ToggleButton" id="lock_orientation_toggle_button"></div>
+            <div class="label left">Lock Orientation</div>
+          </div>
+       </div>
+      
+      <div class='palm-row'>
+        <div x-mojo-element="ListSelector" id="articles_per_page_radio_button" class="listselectorClass"></div>
+      </div>
+      
+      <div class='palm-row'>   
+        <div x-mojo-element="ListSelector" id="theme_radio_button" class="listselectorClass"></div>
+      </div>
+      
+      <div class='palm-row last'>
+        <div x-mojo-element="ListSelector" id="frontpage_button" class="listselectorClass"></div>
+      </div>
+      
+    </div>
+  </div>
+  
+  <div class="palm-group">
+    <div class="palm-group-title">Galleries</div>
+    <div class="palm-list">
+
+      <div class='palm-row first last'>
+        <div class="palm-row-wrapper textfield-group" x-mojo-focus-highlight="false">
+           <div class="title">
+              <div id="galleriesTextFieldId" x-mojo-element="TextField"></div>
+           </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  
+  <div class="palm-group">
+    <div class="palm-group-title">Notifications</div>
+    <div class="palm-list">
+      
+      <div class='palm-row first'>
+         <div class="palm-row-wrapper">
+           <div x-mojo-element="ToggleButton" id="message_notifications_toggle_button"></div>
+           <div class="label left">Messages</div>
+         </div>
+      </div>
+      
+      <div class='palm-row'>
+         <div class="palm-row-wrapper">
+           <div x-mojo-element="ToggleButton" id="karma_notifications_toggle_button"></div>
+           <div class="label left">Karma</div>
+         </div>
+      </div>
+      
+      <div class='palm-row last'>
+         <div class="palm-row-wrapper">
+            <div class="title">
+               <div x-mojo-element="IntegerPicker" id="notification_interval" class="integerpickerClass"></div>
+            </div>
+         </div>
+      </div>
+
+    </div>
+  </div>
+
