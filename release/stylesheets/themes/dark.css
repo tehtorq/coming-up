@@ -128,7 +128,7 @@ body.palm-default {
 }
 
 .event-options {
-  opacity: 0;
+  /*opacity: 0;*/
   height: 36px;
   width: 100%;
   /*border: 1px solid red;*/

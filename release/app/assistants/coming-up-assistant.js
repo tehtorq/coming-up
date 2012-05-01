@@ -13,6 +13,9 @@ ComingUpAssistant = (function() {
     if (params == null) {
       params = {};
     }
+    this.addOptions = __bind(this.addOptions, this);
+    this.deselectThing = __bind(this.deselectThing, this);
+    this.selectThing = __bind(this.selectThing, this);
     this.itemTapped = __bind(this.itemTapped, this);
     this.handleActionSelection = __bind(this.handleActionSelection, this);
     this.handleLoadEventsResponse = __bind(this.handleLoadEventsResponse, this);
@@ -102,6 +105,9 @@ ComingUpAssistant = (function() {
       emptyTemplate: "coming-up/emptylist",
       nullItemTemplate: "list/null_item_template",
       swipeToDelete: false,
+      hasNoWidgets: true,
+      initialAverageRowHeight: 48,
+      reorderable: true,
       dividerFunction: this.dividerFunction,
       dividerTemplate: "coming-up/divider-template",
       formatters: {
@@ -246,6 +252,10 @@ ComingUpAssistant = (function() {
     event = event.replace('yesterday', 'on yesterday');
     event = event.replace('today', 'on today');
     indexOfOn = event.indexOf(" on ");
+    if (indexOfOn === -1) {
+      event += " on today";
+    }
+    indexOfOn = event.indexOf(" on ");
     if (indexOfOn > -1) {
       on_terms.push(event.substring(0, indexOfOn));
       on_terms.push(event.substring(indexOfOn + 1));
@@ -285,7 +295,7 @@ ComingUpAssistant = (function() {
     this.events.items = _.sortBy(this.events.items, function(item) {
       return item.when;
     });
-    this.controller.modelChanged(this.events);
+    this.controller.get("list").mojo.invalidateItems(0);
     return this.saveEvents();
   };
   ComingUpAssistant.prototype.handleLoadEventsResponse = function(response) {
@@ -343,7 +353,7 @@ ComingUpAssistant = (function() {
     }
   };
   ComingUpAssistant.prototype.itemTapped = function(event) {
-    var element_tapped, thing;
+    var element_tapped, old_thing, thing;
     element_tapped = event.originalEvent.target;
     if (element_tapped.className.indexOf('event-option') !== -1) {
       if (element_tapped.className.indexOf('option-priority') !== -1) {
@@ -355,22 +365,38 @@ ComingUpAssistant = (function() {
       }
       return;
     }
-    if (this.selectedIndex === event.index) {
-      thing = this.controller.get("list").mojo.getNodeByIndex(event.index);
+    thing = this.controller.get("list").mojo.getNodeByIndex(event.index);
+    if (thing.hasClassName("selected")) {
+      this.deselectThing(thing);
       this.selectedIndex = null;
-      thing.removeClassName('selected');
-      return thing.down('.event-options').style.opacity = 0;
-    } else {
-      if (this.selectedIndex != null) {
-        thing = this.controller.get("list").mojo.getNodeByIndex(this.selectedIndex);
-        thing.removeClassName('selected');
-        thing.down('.event-options').style.opacity = 0;
-      }
-      thing = this.controller.get("list").mojo.getNodeByIndex(event.index);
-      this.selectedIndex = event.index;
-      thing.addClassName('selected');
-      return thing.down('.event-options').style.opacity = 1;
+      return;
     }
+    if (this.selectedIndex != null) {
+      old_thing = this.controller.get("list").mojo.getNodeByIndex(this.selectedIndex);
+      if (old_thing.hasClassName("selected")) {
+        this.deselectThing(old_thing);
+      }
+      this.selectedIndex = null;
+    }
+    this.selectThing(thing);
+    return this.selectedIndex = event.index;
+  };
+  ComingUpAssistant.prototype.selectThing = function(thing) {
+    this.addOptions(thing);
+    return thing.addClassName('selected');
+  };
+  ComingUpAssistant.prototype.deselectThing = function(thing) {
+    thing.removeClassName('selected');
+    if (thing.down(".event-options")) {
+      return thing.down(".event-options").remove();
+    }
+  };
+  ComingUpAssistant.prototype.addOptions = function(thing) {
+    return thing.insert('<div class="event-options">\
+      <div class="event-option option-priority">Priority</div>\
+      <div class="event-option option-reminder">Reminder</div>\
+      <div class="event-option option-notes">Notes</div>\
+    </div>');
   };
   ComingUpAssistant.prototype.handleCommand = function(event) {
     if (event.type !== Mojo.Event.command) {

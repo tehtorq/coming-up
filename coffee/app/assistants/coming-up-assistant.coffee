@@ -81,8 +81,9 @@ class ComingUpAssistant extends BaseAssistant
       emptyTemplate: "coming-up/emptylist"
       nullItemTemplate: "list/null_item_template"
       swipeToDelete: false
-      #fixedHeightItems: 36
-      #reorderable: true
+      hasNoWidgets: true
+      initialAverageRowHeight: 48
+      reorderable: true
       dividerFunction: @dividerFunction
       dividerTemplate: "coming-up/divider-template"
       formatters: 
@@ -151,7 +152,6 @@ class ComingUpAssistant extends BaseAssistant
     
     if value isnt ""
       @controller.get('textFieldId').mojo.setValue("")
-      #@controller.get('textFieldId').mojo.focus()
       
       @controller.window.setTimeout(
         =>
@@ -223,6 +223,9 @@ class ComingUpAssistant extends BaseAssistant
     event = event.replace('today', 'on today')
 
     indexOfOn = event.indexOf(" on ")
+    
+    event += " on today" if indexOfOn is -1
+    indexOfOn = event.indexOf(" on ")
 
     if indexOfOn > -1
       on_terms.push(event.substring(0, indexOfOn))
@@ -255,7 +258,7 @@ class ComingUpAssistant extends BaseAssistant
     Mojo.Log.info(JSON.stringify(event))
     @events.items.push(event)
     @events.items = _.sortBy @events.items, (item) -> item.when
-    @controller.modelChanged(@events)
+    @controller.get("list").mojo.invalidateItems(0)
     @saveEvents()
   
   handleLoadEventsResponse: (response) =>
@@ -319,21 +322,35 @@ class ComingUpAssistant extends BaseAssistant
         
       return
     
-    if @selectedIndex is event.index
-      thing = @controller.get("list").mojo.getNodeByIndex(event.index)
+    thing = @controller.get("list").mojo.getNodeByIndex(event.index) 
+    
+    if thing.hasClassName("selected")
+      @deselectThing(thing)
       @selectedIndex = null
-      thing.removeClassName('selected')
-      thing.down('.event-options').style.opacity = 0
-    else
-      if @selectedIndex?
-        thing = @controller.get("list").mojo.getNodeByIndex(@selectedIndex)
-        thing.removeClassName('selected')
-        thing.down('.event-options').style.opacity = 0
+      return
       
-      thing = @controller.get("list").mojo.getNodeByIndex(event.index)
-      @selectedIndex = event.index
-      thing.addClassName('selected')
-      thing.down('.event-options').style.opacity = 1
+    if @selectedIndex?
+      old_thing = @controller.get("list").mojo.getNodeByIndex(@selectedIndex) 
+      @deselectThing(old_thing) if old_thing.hasClassName("selected")
+      @selectedIndex = null
+
+    @selectThing(thing)
+    @selectedIndex = event.index
+  
+  selectThing: (thing) =>
+    @addOptions(thing)
+    thing.addClassName('selected')
+    
+  deselectThing: (thing) =>
+    thing.removeClassName('selected')
+    thing.down(".event-options").remove() if thing.down(".event-options")
+    
+  addOptions: (thing) =>
+    thing.insert('<div class="event-options">
+      <div class="event-option option-priority">Priority</div>
+      <div class="event-option option-reminder">Reminder</div>
+      <div class="event-option option-notes">Notes</div>
+    </div>')
   
   handleCommand: (event) ->
     return if event.type isnt Mojo.Event.command
