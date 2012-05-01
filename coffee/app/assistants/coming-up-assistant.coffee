@@ -20,9 +20,38 @@ class ComingUpAssistant extends BaseAssistant
     @today = Date.today()
     @tomorrow = Date.today().addDays(1)
     @after_tomorrow = Date.today().addDays(2)
+    @in_a_week = Date.today().addWeeks(1)
+    @first_day_of_next_month = Date.today().moveToLastDayOfMonth().addDays(1)
+    @new_years_day = Date.today().moveToMonth(0)
+    
+    @month_names = [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December"
+    ]
     
   setup: ->
     super
+    
+    @controller.setupWidget("textFieldId"
+      @attributes =
+        hintText: $L("I want to...")
+        enterSubmits: true
+        requiresEnterKey: true
+        autoFocus: false
+      @model =
+        value: ''
+        disabled: false
+    )
     
     @controller.setupWidget("list-scroller",{mode: 'vertical'},{})
         
@@ -83,6 +112,11 @@ class ComingUpAssistant extends BaseAssistant
     return 'earlier' if @today.isAfter(w)
     return 'today' if @tomorrow.isAfter(w)
     return 'tomorrow' if @after_tomorrow.isAfter(w)
+    return 'in next week' if @in_a_week.isAfter(w)
+    return 'this month' if @first_day_of_next_month.isAfter(w)
+    return 'next year' if w.isAfter(@new_years_day)
+    return @month_names[w.getMonth()]
+      
     'later'
 
   activate: (event) ->
@@ -91,7 +125,10 @@ class ComingUpAssistant extends BaseAssistant
     @addListeners(
       [@controller.get("list"), Mojo.Event.listTap, @itemTapped]
       [@controller.get("list"), Mojo.Event.listDelete, @handleDeleteItem]
+      [@controller.get("textFieldId"), Mojo.Event.propertyChange, @textFieldChanged]
     )
+    
+    Mojo.Log.info(@controller.get('debugger').innerHTML)
 
     if @events.items.length is 0
       @loadEvents()
@@ -108,6 +145,21 @@ class ComingUpAssistant extends BaseAssistant
     @controller.get('horizontal-scroller').style.height = "#{@controller.window.innerHeight - 50}px"
     @controller.get('list-scroller').style.height = "#{@controller.window.innerHeight - 50}px"
     @controller.get('horizontal-scroller').mojo.setSnapIndex(0, false)
+    
+  textFieldChanged: (event) =>
+    value = @controller.get('textFieldId').mojo.getValue()
+    
+    if value isnt ""
+      @controller.get('textFieldId').mojo.setValue("")
+      #@controller.get('textFieldId').mojo.focus()
+      
+      @controller.window.setTimeout(
+        =>
+          @controller.get('textFieldId').mojo.focus()
+        10
+      )
+      
+      @addNewEvent(value)
     
   timeChanged: =>
     
@@ -168,6 +220,7 @@ class ComingUpAssistant extends BaseAssistant
 
     event = event.replace('tomorrow', 'on tomorrow')
     event = event.replace('yesterday', 'on yesterday')
+    event = event.replace('today', 'on today')
 
     indexOfOn = event.indexOf(" on ")
 
@@ -196,6 +249,14 @@ class ComingUpAssistant extends BaseAssistant
     
     datetime_string = date_string + time_string
     {event: event_string, when: datetime_string, priority: false}
+    
+  addNewEvent: (string) =>
+    event = @processNewEvent(string)
+    Mojo.Log.info(JSON.stringify(event))
+    @events.items.push(event)
+    @events.items = _.sortBy @events.items, (item) -> item.when
+    @controller.modelChanged(@events)
+    @saveEvents()
   
   handleLoadEventsResponse: (response) =>
     Mojo.Log.info(JSON.stringify(response))
@@ -250,7 +311,6 @@ class ComingUpAssistant extends BaseAssistant
 
     if element_tapped.className.indexOf('event-option') isnt -1
       if element_tapped.className.indexOf('option-priority') isnt -1
-        Banner.send('priority')
         @togglePriority(event.index)
       else if element_tapped.className.indexOf('option-reminder') isnt -1
         Banner.send('reminder')
@@ -263,14 +323,17 @@ class ComingUpAssistant extends BaseAssistant
       thing = @controller.get("list").mojo.getNodeByIndex(event.index)
       @selectedIndex = null
       thing.removeClassName('selected')
+      thing.down('.event-options').style.opacity = 0
     else
       if @selectedIndex?
         thing = @controller.get("list").mojo.getNodeByIndex(@selectedIndex)
         thing.removeClassName('selected')
+        thing.down('.event-options').style.opacity = 0
       
       thing = @controller.get("list").mojo.getNodeByIndex(event.index)
       @selectedIndex = event.index
       thing.addClassName('selected')
+      thing.down('.event-options').style.opacity = 1
   
   handleCommand: (event) ->
     return if event.type isnt Mojo.Event.command

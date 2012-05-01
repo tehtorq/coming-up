@@ -16,12 +16,14 @@ ComingUpAssistant = (function() {
     this.itemTapped = __bind(this.itemTapped, this);
     this.handleActionSelection = __bind(this.handleActionSelection, this);
     this.handleLoadEventsResponse = __bind(this.handleLoadEventsResponse, this);
+    this.addNewEvent = __bind(this.addNewEvent, this);
     this.handleDeleteItem = __bind(this.handleDeleteItem, this);
     this.priorityFormatter = __bind(this.priorityFormatter, this);
     this.whenFormatter = __bind(this.whenFormatter, this);
     this.textChanged = __bind(this.textChanged, this);
     this.dateChanged = __bind(this.dateChanged, this);
     this.timeChanged = __bind(this.timeChanged, this);
+    this.textFieldChanged = __bind(this.textFieldChanged, this);
     this.dividerFunction = __bind(this.dividerFunction, this);
     this.handleUpdate = __bind(this.handleUpdate, this);
     this.handleMoved = __bind(this.handleMoved, this);
@@ -53,10 +55,23 @@ ComingUpAssistant = (function() {
   ComingUpAssistant.prototype.setupDates = function() {
     this.today = Date.today();
     this.tomorrow = Date.today().addDays(1);
-    return this.after_tomorrow = Date.today().addDays(2);
+    this.after_tomorrow = Date.today().addDays(2);
+    this.in_a_week = Date.today().addWeeks(1);
+    this.first_day_of_next_month = Date.today().moveToLastDayOfMonth().addDays(1);
+    this.new_years_day = Date.today().moveToMonth(0);
+    return this.month_names = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   };
   ComingUpAssistant.prototype.setup = function() {
     ComingUpAssistant.__super__.setup.apply(this, arguments);
+    this.controller.setupWidget("textFieldId", this.attributes = {
+      hintText: $L("I want to..."),
+      enterSubmits: true,
+      requiresEnterKey: true,
+      autoFocus: false
+    }, this.model = {
+      value: '',
+      disabled: false
+    });
     this.controller.setupWidget("list-scroller", {
       mode: 'vertical'
     }, {});
@@ -125,11 +140,22 @@ ComingUpAssistant = (function() {
     if (this.after_tomorrow.isAfter(w)) {
       return 'tomorrow';
     }
+    if (this.in_a_week.isAfter(w)) {
+      return 'in next week';
+    }
+    if (this.first_day_of_next_month.isAfter(w)) {
+      return 'this month';
+    }
+    if (w.isAfter(this.new_years_day)) {
+      return 'next year';
+    }
+    return this.month_names[w.getMonth()];
     return 'later';
   };
   ComingUpAssistant.prototype.activate = function(event) {
     ComingUpAssistant.__super__.activate.apply(this, arguments);
-    this.addListeners([this.controller.get("list"), Mojo.Event.listTap, this.itemTapped], [this.controller.get("list"), Mojo.Event.listDelete, this.handleDeleteItem]);
+    this.addListeners([this.controller.get("list"), Mojo.Event.listTap, this.itemTapped], [this.controller.get("list"), Mojo.Event.listDelete, this.handleDeleteItem], [this.controller.get("textFieldId"), Mojo.Event.propertyChange, this.textFieldChanged]);
+    Mojo.Log.info(this.controller.get('debugger').innerHTML);
     if (this.events.items.length === 0) {
       return this.loadEvents();
     }
@@ -146,6 +172,17 @@ ComingUpAssistant = (function() {
     this.controller.get('horizontal-scroller').style.height = "" + (this.controller.window.innerHeight - 50) + "px";
     this.controller.get('list-scroller').style.height = "" + (this.controller.window.innerHeight - 50) + "px";
     return this.controller.get('horizontal-scroller').mojo.setSnapIndex(0, false);
+  };
+  ComingUpAssistant.prototype.textFieldChanged = function(event) {
+    var value;
+    value = this.controller.get('textFieldId').mojo.getValue();
+    if (value !== "") {
+      this.controller.get('textFieldId').mojo.setValue("");
+      this.controller.window.setTimeout(__bind(function() {
+        return this.controller.get('textFieldId').mojo.focus();
+      }, this), 10);
+      return this.addNewEvent(value);
+    }
   };
   ComingUpAssistant.prototype.timeChanged = function() {};
   ComingUpAssistant.prototype.dateChanged = function() {};
@@ -207,6 +244,7 @@ ComingUpAssistant = (function() {
     time_string = "000000";
     event = event.replace('tomorrow', 'on tomorrow');
     event = event.replace('yesterday', 'on yesterday');
+    event = event.replace('today', 'on today');
     indexOfOn = event.indexOf(" on ");
     if (indexOfOn > -1) {
       on_terms.push(event.substring(0, indexOfOn));
@@ -238,6 +276,17 @@ ComingUpAssistant = (function() {
       when: datetime_string,
       priority: false
     };
+  };
+  ComingUpAssistant.prototype.addNewEvent = function(string) {
+    var event;
+    event = this.processNewEvent(string);
+    Mojo.Log.info(JSON.stringify(event));
+    this.events.items.push(event);
+    this.events.items = _.sortBy(this.events.items, function(item) {
+      return item.when;
+    });
+    this.controller.modelChanged(this.events);
+    return this.saveEvents();
   };
   ComingUpAssistant.prototype.handleLoadEventsResponse = function(response) {
     var event, _ref, _ref2;
@@ -298,7 +347,6 @@ ComingUpAssistant = (function() {
     element_tapped = event.originalEvent.target;
     if (element_tapped.className.indexOf('event-option') !== -1) {
       if (element_tapped.className.indexOf('option-priority') !== -1) {
-        Banner.send('priority');
         this.togglePriority(event.index);
       } else if (element_tapped.className.indexOf('option-reminder') !== -1) {
         Banner.send('reminder');
@@ -310,15 +358,18 @@ ComingUpAssistant = (function() {
     if (this.selectedIndex === event.index) {
       thing = this.controller.get("list").mojo.getNodeByIndex(event.index);
       this.selectedIndex = null;
-      return thing.removeClassName('selected');
+      thing.removeClassName('selected');
+      return thing.down('.event-options').style.opacity = 0;
     } else {
       if (this.selectedIndex != null) {
         thing = this.controller.get("list").mojo.getNodeByIndex(this.selectedIndex);
         thing.removeClassName('selected');
+        thing.down('.event-options').style.opacity = 0;
       }
       thing = this.controller.get("list").mojo.getNodeByIndex(event.index);
       this.selectedIndex = event.index;
-      return thing.addClassName('selected');
+      thing.addClassName('selected');
+      return thing.down('.event-options').style.opacity = 1;
     }
   };
   ComingUpAssistant.prototype.handleCommand = function(event) {
