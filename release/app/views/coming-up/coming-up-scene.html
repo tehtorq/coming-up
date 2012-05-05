@@ -1,48 +1,20 @@
 <div id="header-bar">
-  <div id="debugger">
-    <div x-mojo-element="TextField" id="textFieldId" class="textFieldClass" name="textFieldName"></div>
-  </div>  
+  <div x-mojo-element="TextField" id="textFieldId" class="textFieldClass" name="textFieldName"></div>
 </div>
 
+<div id="draggable-thingy"></div>
+
 <div id="content-area">
-  <div x-mojo-element="Scroller" id="horizontal-scroller">
-    <div id="horizontally-scrolled-container" class="horizontally-scrolled-container">
-      
-      <div class="scrollerItem" id="scrollerItem:1">
-        <div id="list-scroller" x-mojo-element="Scroller">
-          <div id="list" x-mojo-element="List"></div>
-        </div>
-      </div>
-      
-      <div class="scrollerItem" id="scrollerItem:2">
-        
-        <div class="palm-row" x-mojo-focus-highlight="true">
-          <div class="palm-row-wrapper">
-            <div class="title">
-              <div id='datepicker' x-mojo-element="DatePicker"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="palm-row" x-mojo-focus-highlight="true">
-          <div class="palm-row-wrapper">
-            <div class="title">
-              <div id='timepicker' x-mojo-element="TimePicker"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class='palm-row'>
-          <div class="palm-row-wrapper textfield-group" x-mojo-focus-highlight="false">
-            <div class="title">
-              <div id="textField" x-mojo-element="TextField"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-        
-    </div>
+  <div id="list-scroller" x-mojo-element="Scroller">
+    <div id="list" x-mojo-element="List"></div>
   </div>
 </div>
 
-<!-- <div id="footer-bar">Add new</div> -->
+<div id="floater" class="floating">
+  <!-- <div id="bodyTextFieldId"></div> -->
+  <div id="bodyTextFieldId" x-mojo-element="TextField" align="left"></div>
+  <div class="floater-button-holder">
+    <div id="cancel" class="floater-button">Cancel</div>
+    <div id="ok" class="floater-button ok">Ok</div>
+  </div>
+</div>

@@ -15,6 +15,10 @@
         "source": "app/assistants/coming-up-assistant.js"
     },
     {
+        "scenes": "notes",
+        "source": "app/assistants/notes-assistant.js"
+    },
+    {
         "scenes": "prefs",
         "source": "app/assistants/prefs-assistant.js"
     },

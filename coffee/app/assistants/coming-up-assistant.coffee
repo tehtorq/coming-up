@@ -5,6 +5,7 @@ class ComingUpAssistant extends BaseAssistant
     
     @events = { items : [] }
     @params = params
+    @bodyModel = { value : '' }
     
     Mojo.Log.info(JSON.stringify(@params))
     
@@ -42,6 +43,11 @@ class ComingUpAssistant extends BaseAssistant
   setup: ->
     super
     
+    @controller.setupWidget("bodyTextFieldId",
+      { focusMode : Mojo.Widget.focusSelectMode, multiline: true },
+      @bodyModel
+    )
+    
     @controller.setupWidget("textFieldId"
       @attributes =
         hintText: $L("I want to...")
@@ -58,28 +64,8 @@ class ComingUpAssistant extends BaseAssistant
     @setupDates()
     @setupMenu()
     
-    @dateModel = {date : new Date()}
-    @controller.setupWidget('datepicker', {modelProperty:'date'}, @dateModel)
-    @controller.listen('datepicker', Mojo.Event.propertyChange, @dateChanged)
-    
-    @timeModel = {time : new Date()}
-    @controller.setupWidget('timepicker', {modelProperty:'time'}, @timeModel)
-    @controller.listen('timepicker', Mojo.Event.propertyChange, @timeChanged)
-    
-    @controller.setupWidget('textField', {
-      textFieldName: 'username',
-      hintText: 'Description',
-      modelProperty: 'value'
-      }
-      {}
-    )
-    
-    @controller.listen('textField', Mojo.Event.propertyChange, @textChanged)
-    
     @controller.setupWidget("list", {
       itemTemplate: "coming-up/event"
-      emptyTemplate: "coming-up/emptylist"
-      nullItemTemplate: "list/null_item_template"
       swipeToDelete: false
       hasNoWidgets: true
       initialAverageRowHeight: 48
@@ -90,22 +76,6 @@ class ComingUpAssistant extends BaseAssistant
         when: @whenFormatter
         priority: @priorityFormatter
       }, @events)
-      
-    @controller.setupWidget("horizontal-scroller", {
-      mode: 'horizontal-snap'
-      }, @model = {
-      snapElements: { x: $$('.scrollerItem') },
-      snapIndex: 0
-    })
-
-  handleMoved: (done, position) =>
-    if done
-      Mojo.Log.info("Done: ", done, "Position: ", Object.toJSON(position))
-
-  handleUpdate: (event) =>
-    event.addListener({
-      moved: @handleMoved                         
-    })
     
   dividerFunction: (model) =>   
     w = Date.parse(model.when.substr(0,4) + "-" + model.when.substr(4,2) + "-" + model.when.substr(6,2))
@@ -122,18 +92,85 @@ class ComingUpAssistant extends BaseAssistant
 
   activate: (event) ->
     super
+    @controller.get("floater").hide()
     
     @addListeners(
       [@controller.get("list"), Mojo.Event.listTap, @itemTapped]
       [@controller.get("list"), Mojo.Event.listDelete, @handleDeleteItem]
       [@controller.get("textFieldId"), Mojo.Event.propertyChange, @textFieldChanged]
+      [@controller.get("list"), Mojo.Event.dragStart, @dragStartHandler]
+      [@controller.get("cancel"), Mojo.Event.tap, @tapCancel]
+      [@controller.get("ok"), Mojo.Event.tap, @tapOk]
     )
-    
-    Mojo.Log.info(@controller.get('debugger').innerHTML)
 
     if @events.items.length is 0
       @loadEvents()
 
+  tapCancel: (event) =>
+    @controller.get("floater").hide()
+    
+  tapOk: (event) =>
+    @events.items[@editIndex].event = @controller.get('bodyTextFieldId').mojo.getValue()
+    @saveEvents()
+    @controller.get('list').mojo.noticeUpdatedItems(@editIndex, [@events.items[@editIndex]])
+    @controller.get('bodyTextFieldId').mojo.setValue("")
+    @controller.get("floater").hide()
+          
+  dragStartHandler: (event) =>
+    if (Math.abs(event.filteredDistance.x) > Math.abs(event.filteredDistance.y) * 2)
+      @crossing_off = true
+      node = event.target.up(".thing")
+      node.insert('<div class="draggable-thingy"></div>', { position: 'before' })
+      Mojo.Drag.setupDropContainer(node, @)
+      
+      draggy = node.down(".draggable-thingy")
+      draggy.style.left = event.x
+      draggy.style.top = event.y
+
+      node._dragObj = Mojo.Drag.startDragging(@controller, draggy, event.down, {
+        preventVertical: false,
+        draggingClass: "draggy",
+        preventDropReset: false
+      })
+
+      event.stop()
+      
+  dragEnter: (element) =>
+    Banner.send "drag enter"
+    
+  dragLeave: (element) =>
+    Banner.send "drag leave"
+    @crossing_off = false
+
+  dragHover: (element) =>
+  #   if (element.offsetLeft > 200 or element.offsetLeft < -200)
+  #     Mojo.Log.info "true?"
+  #     #@swipeMenu.show = true
+  #   else
+  #     @crossing_off = false
+  #     Mojo.Log.info "false?"
+  #     #@swipeMenu.show = false  
+  
+  markThingAsDone: (index) ->
+    thing = @controller.get("list").mojo.getNodeByIndex(index)
+    event = @events.items[index]
+    event.crossed_off = true
+    event.event = "<s><s><s>#{event.event}</s></s></s>"
+    @saveEvents()
+    
+    el = thing.down(".event-holder")
+    el.update(event.event)
+    @crossing_off = false
+
+  dragDrop: (element) =>
+    Banner.send "drag drop: #{@crossing_off}"
+    
+    if @crossing_off
+      el = element.up(".thing").down(".event-holder")
+      content = "<s>" + el.innerHTML + "</s>"
+      el.update(content)
+      @crossing_off = false
+  
   deactivate: (event) ->
     super
   
@@ -141,36 +178,21 @@ class ComingUpAssistant extends BaseAssistant
     super
     
   ready: ->
-    @controller.get('horizontally-scrolled-container').style.width = "#{(@controller.window.innerWidth + 2) * 2}px"
     @controller.get('content-area').style.height = "#{@controller.window.innerHeight - 50}px"
-    @controller.get('horizontal-scroller').style.height = "#{@controller.window.innerHeight - 50}px"
     @controller.get('list-scroller').style.height = "#{@controller.window.innerHeight - 50}px"
-    @controller.get('horizontal-scroller').mojo.setSnapIndex(0, false)
     
   textFieldChanged: (event) =>
     value = @controller.get('textFieldId').mojo.getValue()
     
     if value isnt ""
       @controller.get('textFieldId').mojo.setValue("")
-      
-      @controller.window.setTimeout(
-        =>
-          @controller.get('textFieldId').mojo.focus()
-        10
-      )
-      
       @addNewEvent(value)
-    
-  timeChanged: =>
-    
-  dateChanged: =>
-  
-  textChanged: (propertyChangeEvent) =>
-    originalEvent = propertyChangeEvent.originalEvent
-    if originalEvent.typeisblur
-      #Ignore this event
-    else
-      Mojo.Log.info("The user made a property change event. This must be the result of the user pressing the enter key")
+      
+    @controller.window.setTimeout(
+      =>
+        @controller.get('textFieldId').mojo.focus()
+      10
+    )
   
   whenFormatter: (propertyValue, model) =>
     return "" unless model.when?
@@ -189,10 +211,7 @@ class ComingUpAssistant extends BaseAssistant
   
   saveEvents: ->
     @depot.add('events', JSON.stringify(@events.items))
-    
-  subredditsLoaded: ->
-    Subreddit.cached_list.length > 0
-    
+      
   loadEvents: ->
     @depot = new Mojo.Depot(
       {name: 'events'}
@@ -251,7 +270,7 @@ class ComingUpAssistant extends BaseAssistant
         event_string = term
     
     datetime_string = date_string + time_string
-    {event: event_string, when: datetime_string, priority: false}
+    {event: event_string, when: datetime_string, priority: false, id: new Date().getTime()}
     
   addNewEvent: (string) =>
     event = @processNewEvent(string)
@@ -259,6 +278,7 @@ class ComingUpAssistant extends BaseAssistant
     @events.items.push(event)
     @events.items = _.sortBy @events.items, (item) -> item.when
     @controller.get("list").mojo.invalidateItems(0)
+    @controller.modelChanged(@events)
     @saveEvents()
   
   handleLoadEventsResponse: (response) =>
@@ -275,28 +295,8 @@ class ComingUpAssistant extends BaseAssistant
     # todo: sort events by time here...
     
     @events.items = _.sortBy @events.items, (item) -> item.when
-      
     @controller.modelChanged(@events)
     @saveEvents()
-  
-  handleActionSelection: (command) =>
-    return unless command?
-    
-    params = command.split ' '
-  
-  findArticleIndex: (article_name) ->
-    index = -1
-    
-    _.each @articles.items, (item, i) ->
-      index = i if item.data.name is article_name
-  
-    index
-    
-  findArticleByName: (name) ->
-    _.first _.select @articles.items, (article) -> article.data.name is name
-    
-  getEvent: (index) ->
-    @controller.get("list").mojo.getNodeByIndex(event.index)
     
   togglePriority: (index) ->
     item = @events.items[index]
@@ -310,7 +310,12 @@ class ComingUpAssistant extends BaseAssistant
       thing.removeClassName('priority')
   
   itemTapped: (event) =>
+    note = @events.items[event.index]
+    
+    return if note.crossed_off is true
+    
     element_tapped = event.originalEvent.target
+    thing = @controller.get("list").mojo.getNodeByIndex(event.index)
 
     if element_tapped.className.indexOf('event-option') isnt -1
       if element_tapped.className.indexOf('option-priority') isnt -1
@@ -318,11 +323,20 @@ class ComingUpAssistant extends BaseAssistant
       else if element_tapped.className.indexOf('option-reminder') isnt -1
         Banner.send('reminder')
       else if element_tapped.className.indexOf('option-notes') isnt -1
-        Banner.send('notes')
+        @controller.stageController.pushScene({name:"notes"}, {event: @events.items[event.index]})
+      else if element_tapped.className.indexOf('option-edit') isnt -1
+        @editIndex = event.index
+        @controller.get("floater").show()
+        text = @events.items[event.index].event
+        @controller.get('bodyTextFieldId').mojo.setValue(text)
+        Mojo.Log.info @controller.get('bodyTextFieldId').innerHTML
+        @controller.get("floater").show()
+        @controller.get('bodyTextFieldId').mojo.focus()
+      else if element_tapped.className.indexOf('option-done') isnt -1
+        @markThingAsDone(event.index)
+        @deselectThing(thing)
         
       return
-    
-    thing = @controller.get("list").mojo.getNodeByIndex(event.index) 
     
     if thing.hasClassName("selected")
       @deselectThing(thing)
@@ -350,6 +364,8 @@ class ComingUpAssistant extends BaseAssistant
       <div class="event-option option-priority">Priority</div>
       <div class="event-option option-reminder">Reminder</div>
       <div class="event-option option-notes">Notes</div>
+      <div class="event-option option-edit">Edit</div>
+      <div class="event-option option-done">Done</div>
     </div>')
   
   handleCommand: (event) ->

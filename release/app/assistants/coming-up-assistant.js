@@ -17,24 +17,28 @@ ComingUpAssistant = (function() {
     this.deselectThing = __bind(this.deselectThing, this);
     this.selectThing = __bind(this.selectThing, this);
     this.itemTapped = __bind(this.itemTapped, this);
-    this.handleActionSelection = __bind(this.handleActionSelection, this);
     this.handleLoadEventsResponse = __bind(this.handleLoadEventsResponse, this);
     this.addNewEvent = __bind(this.addNewEvent, this);
     this.handleDeleteItem = __bind(this.handleDeleteItem, this);
     this.priorityFormatter = __bind(this.priorityFormatter, this);
     this.whenFormatter = __bind(this.whenFormatter, this);
-    this.textChanged = __bind(this.textChanged, this);
-    this.dateChanged = __bind(this.dateChanged, this);
-    this.timeChanged = __bind(this.timeChanged, this);
     this.textFieldChanged = __bind(this.textFieldChanged, this);
+    this.dragDrop = __bind(this.dragDrop, this);
+    this.dragHover = __bind(this.dragHover, this);
+    this.dragLeave = __bind(this.dragLeave, this);
+    this.dragEnter = __bind(this.dragEnter, this);
+    this.dragStartHandler = __bind(this.dragStartHandler, this);
+    this.tapOk = __bind(this.tapOk, this);
+    this.tapCancel = __bind(this.tapCancel, this);
     this.dividerFunction = __bind(this.dividerFunction, this);
-    this.handleUpdate = __bind(this.handleUpdate, this);
-    this.handleMoved = __bind(this.handleMoved, this);
     ComingUpAssistant.__super__.constructor.apply(this, arguments);
     this.events = {
       items: []
     };
     this.params = params;
+    this.bodyModel = {
+      value: ''
+    };
     Mojo.Log.info(JSON.stringify(this.params));
   }
   ComingUpAssistant.prototype.setupMenu = function() {
@@ -66,6 +70,10 @@ ComingUpAssistant = (function() {
   };
   ComingUpAssistant.prototype.setup = function() {
     ComingUpAssistant.__super__.setup.apply(this, arguments);
+    this.controller.setupWidget("bodyTextFieldId", {
+      focusMode: Mojo.Widget.focusSelectMode,
+      multiline: true
+    }, this.bodyModel);
     this.controller.setupWidget("textFieldId", this.attributes = {
       hintText: $L("I want to..."),
       enterSubmits: true,
@@ -80,30 +88,8 @@ ComingUpAssistant = (function() {
     }, {});
     this.setupDates();
     this.setupMenu();
-    this.dateModel = {
-      date: new Date()
-    };
-    this.controller.setupWidget('datepicker', {
-      modelProperty: 'date'
-    }, this.dateModel);
-    this.controller.listen('datepicker', Mojo.Event.propertyChange, this.dateChanged);
-    this.timeModel = {
-      time: new Date()
-    };
-    this.controller.setupWidget('timepicker', {
-      modelProperty: 'time'
-    }, this.timeModel);
-    this.controller.listen('timepicker', Mojo.Event.propertyChange, this.timeChanged);
-    this.controller.setupWidget('textField', {
-      textFieldName: 'username',
-      hintText: 'Description',
-      modelProperty: 'value'
-    }, {});
-    this.controller.listen('textField', Mojo.Event.propertyChange, this.textChanged);
-    this.controller.setupWidget("list", {
+    return this.controller.setupWidget("list", {
       itemTemplate: "coming-up/event",
-      emptyTemplate: "coming-up/emptylist",
-      nullItemTemplate: "list/null_item_template",
       swipeToDelete: false,
       hasNoWidgets: true,
       initialAverageRowHeight: 48,
@@ -115,24 +101,6 @@ ComingUpAssistant = (function() {
         priority: this.priorityFormatter
       }
     }, this.events);
-    return this.controller.setupWidget("horizontal-scroller", {
-      mode: 'horizontal-snap'
-    }, this.model = {
-      snapElements: {
-        x: $$('.scrollerItem')
-      },
-      snapIndex: 0
-    });
-  };
-  ComingUpAssistant.prototype.handleMoved = function(done, position) {
-    if (done) {
-      return Mojo.Log.info("Done: ", done, "Position: ", Object.toJSON(position));
-    }
-  };
-  ComingUpAssistant.prototype.handleUpdate = function(event) {
-    return event.addListener({
-      moved: this.handleMoved
-    });
   };
   ComingUpAssistant.prototype.dividerFunction = function(model) {
     var w;
@@ -160,10 +128,69 @@ ComingUpAssistant = (function() {
   };
   ComingUpAssistant.prototype.activate = function(event) {
     ComingUpAssistant.__super__.activate.apply(this, arguments);
-    this.addListeners([this.controller.get("list"), Mojo.Event.listTap, this.itemTapped], [this.controller.get("list"), Mojo.Event.listDelete, this.handleDeleteItem], [this.controller.get("textFieldId"), Mojo.Event.propertyChange, this.textFieldChanged]);
-    Mojo.Log.info(this.controller.get('debugger').innerHTML);
+    this.controller.get("floater").hide();
+    this.addListeners([this.controller.get("list"), Mojo.Event.listTap, this.itemTapped], [this.controller.get("list"), Mojo.Event.listDelete, this.handleDeleteItem], [this.controller.get("textFieldId"), Mojo.Event.propertyChange, this.textFieldChanged], [this.controller.get("list"), Mojo.Event.dragStart, this.dragStartHandler], [this.controller.get("cancel"), Mojo.Event.tap, this.tapCancel], [this.controller.get("ok"), Mojo.Event.tap, this.tapOk]);
     if (this.events.items.length === 0) {
       return this.loadEvents();
+    }
+  };
+  ComingUpAssistant.prototype.tapCancel = function(event) {
+    return this.controller.get("floater").hide();
+  };
+  ComingUpAssistant.prototype.tapOk = function(event) {
+    this.events.items[this.editIndex].event = this.controller.get('bodyTextFieldId').mojo.getValue();
+    this.saveEvents();
+    this.controller.get('list').mojo.noticeUpdatedItems(this.editIndex, [this.events.items[this.editIndex]]);
+    this.controller.get('bodyTextFieldId').mojo.setValue("");
+    return this.controller.get("floater").hide();
+  };
+  ComingUpAssistant.prototype.dragStartHandler = function(event) {
+    var draggy, node;
+    if (Math.abs(event.filteredDistance.x) > Math.abs(event.filteredDistance.y) * 2) {
+      this.crossing_off = true;
+      node = event.target.up(".thing");
+      node.insert('<div class="draggable-thingy"></div>', {
+        position: 'before'
+      });
+      Mojo.Drag.setupDropContainer(node, this);
+      draggy = node.down(".draggable-thingy");
+      draggy.style.left = event.x;
+      draggy.style.top = event.y;
+      node._dragObj = Mojo.Drag.startDragging(this.controller, draggy, event.down, {
+        preventVertical: false,
+        draggingClass: "draggy",
+        preventDropReset: false
+      });
+      return event.stop();
+    }
+  };
+  ComingUpAssistant.prototype.dragEnter = function(element) {
+    return Banner.send("drag enter");
+  };
+  ComingUpAssistant.prototype.dragLeave = function(element) {
+    Banner.send("drag leave");
+    return this.crossing_off = false;
+  };
+  ComingUpAssistant.prototype.dragHover = function(element) {};
+  ComingUpAssistant.prototype.markThingAsDone = function(index) {
+    var el, event, thing;
+    thing = this.controller.get("list").mojo.getNodeByIndex(index);
+    event = this.events.items[index];
+    event.crossed_off = true;
+    event.event = "<s><s><s>" + event.event + "</s></s></s>";
+    this.saveEvents();
+    el = thing.down(".event-holder");
+    el.update(event.event);
+    return this.crossing_off = false;
+  };
+  ComingUpAssistant.prototype.dragDrop = function(element) {
+    var content, el;
+    Banner.send("drag drop: " + this.crossing_off);
+    if (this.crossing_off) {
+      el = element.up(".thing").down(".event-holder");
+      content = "<s>" + el.innerHTML + "</s>";
+      el.update(content);
+      return this.crossing_off = false;
     }
   };
   ComingUpAssistant.prototype.deactivate = function(event) {
@@ -173,31 +200,19 @@ ComingUpAssistant = (function() {
     return ComingUpAssistant.__super__.cleanup.apply(this, arguments);
   };
   ComingUpAssistant.prototype.ready = function() {
-    this.controller.get('horizontally-scrolled-container').style.width = "" + ((this.controller.window.innerWidth + 2) * 2) + "px";
     this.controller.get('content-area').style.height = "" + (this.controller.window.innerHeight - 50) + "px";
-    this.controller.get('horizontal-scroller').style.height = "" + (this.controller.window.innerHeight - 50) + "px";
-    this.controller.get('list-scroller').style.height = "" + (this.controller.window.innerHeight - 50) + "px";
-    return this.controller.get('horizontal-scroller').mojo.setSnapIndex(0, false);
+    return this.controller.get('list-scroller').style.height = "" + (this.controller.window.innerHeight - 50) + "px";
   };
   ComingUpAssistant.prototype.textFieldChanged = function(event) {
     var value;
     value = this.controller.get('textFieldId').mojo.getValue();
     if (value !== "") {
       this.controller.get('textFieldId').mojo.setValue("");
-      this.controller.window.setTimeout(__bind(function() {
-        return this.controller.get('textFieldId').mojo.focus();
-      }, this), 10);
-      return this.addNewEvent(value);
+      this.addNewEvent(value);
     }
-  };
-  ComingUpAssistant.prototype.timeChanged = function() {};
-  ComingUpAssistant.prototype.dateChanged = function() {};
-  ComingUpAssistant.prototype.textChanged = function(propertyChangeEvent) {
-    var originalEvent;
-    originalEvent = propertyChangeEvent.originalEvent;
-    if (originalEvent.typeisblur) {} else {
-      return Mojo.Log.info("The user made a property change event. This must be the result of the user pressing the enter key");
-    }
+    return this.controller.window.setTimeout(__bind(function() {
+      return this.controller.get('textFieldId').mojo.focus();
+    }, this), 10);
   };
   ComingUpAssistant.prototype.whenFormatter = function(propertyValue, model) {
     var string, w;
@@ -220,9 +235,6 @@ ComingUpAssistant = (function() {
   };
   ComingUpAssistant.prototype.saveEvents = function() {
     return this.depot.add('events', JSON.stringify(this.events.items));
-  };
-  ComingUpAssistant.prototype.subredditsLoaded = function() {
-    return Subreddit.cached_list.length > 0;
   };
   ComingUpAssistant.prototype.loadEvents = function() {
     return this.depot = new Mojo.Depot({
@@ -284,7 +296,8 @@ ComingUpAssistant = (function() {
     return {
       event: event_string,
       when: datetime_string,
-      priority: false
+      priority: false,
+      id: new Date().getTime()
     };
   };
   ComingUpAssistant.prototype.addNewEvent = function(string) {
@@ -296,6 +309,7 @@ ComingUpAssistant = (function() {
       return item.when;
     });
     this.controller.get("list").mojo.invalidateItems(0);
+    this.controller.modelChanged(this.events);
     return this.saveEvents();
   };
   ComingUpAssistant.prototype.handleLoadEventsResponse = function(response) {
@@ -315,31 +329,6 @@ ComingUpAssistant = (function() {
     this.controller.modelChanged(this.events);
     return this.saveEvents();
   };
-  ComingUpAssistant.prototype.handleActionSelection = function(command) {
-    var params;
-    if (command == null) {
-      return;
-    }
-    return params = command.split(' ');
-  };
-  ComingUpAssistant.prototype.findArticleIndex = function(article_name) {
-    var index;
-    index = -1;
-    _.each(this.articles.items, function(item, i) {
-      if (item.data.name === article_name) {
-        return index = i;
-      }
-    });
-    return index;
-  };
-  ComingUpAssistant.prototype.findArticleByName = function(name) {
-    return _.first(_.select(this.articles.items, function(article) {
-      return article.data.name === name;
-    }));
-  };
-  ComingUpAssistant.prototype.getEvent = function(index) {
-    return this.controller.get("list").mojo.getNodeByIndex(event.index);
-  };
   ComingUpAssistant.prototype.togglePriority = function(index) {
     var item, thing;
     item = this.events.items[index];
@@ -353,19 +342,38 @@ ComingUpAssistant = (function() {
     }
   };
   ComingUpAssistant.prototype.itemTapped = function(event) {
-    var element_tapped, old_thing, thing;
+    var element_tapped, note, old_thing, text, thing;
+    note = this.events.items[event.index];
+    if (note.crossed_off === true) {
+      return;
+    }
     element_tapped = event.originalEvent.target;
+    thing = this.controller.get("list").mojo.getNodeByIndex(event.index);
     if (element_tapped.className.indexOf('event-option') !== -1) {
       if (element_tapped.className.indexOf('option-priority') !== -1) {
         this.togglePriority(event.index);
       } else if (element_tapped.className.indexOf('option-reminder') !== -1) {
         Banner.send('reminder');
       } else if (element_tapped.className.indexOf('option-notes') !== -1) {
-        Banner.send('notes');
+        this.controller.stageController.pushScene({
+          name: "notes"
+        }, {
+          event: this.events.items[event.index]
+        });
+      } else if (element_tapped.className.indexOf('option-edit') !== -1) {
+        this.editIndex = event.index;
+        this.controller.get("floater").show();
+        text = this.events.items[event.index].event;
+        this.controller.get('bodyTextFieldId').mojo.setValue(text);
+        Mojo.Log.info(this.controller.get('bodyTextFieldId').innerHTML);
+        this.controller.get("floater").show();
+        this.controller.get('bodyTextFieldId').mojo.focus();
+      } else if (element_tapped.className.indexOf('option-done') !== -1) {
+        this.markThingAsDone(event.index);
+        this.deselectThing(thing);
       }
       return;
     }
-    thing = this.controller.get("list").mojo.getNodeByIndex(event.index);
     if (thing.hasClassName("selected")) {
       this.deselectThing(thing);
       this.selectedIndex = null;
@@ -396,6 +404,8 @@ ComingUpAssistant = (function() {
       <div class="event-option option-priority">Priority</div>\
       <div class="event-option option-reminder">Reminder</div>\
       <div class="event-option option-notes">Notes</div>\
+      <div class="event-option option-edit">Edit</div>\
+      <div class="event-option option-done">Done</div>\
     </div>');
   };
   ComingUpAssistant.prototype.handleCommand = function(event) {
