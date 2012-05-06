@@ -1,4 +1,4 @@
-var ComingUpAssistant;
+var EventsAssistant;
 var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; }, __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) {
   for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; }
   function ctor() { this.constructor = child; }
@@ -7,9 +7,9 @@ var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments)
   child.__super__ = parent.prototype;
   return child;
 };
-ComingUpAssistant = (function() {
-  __extends(ComingUpAssistant, BaseAssistant);
-  function ComingUpAssistant(params) {
+EventsAssistant = (function() {
+  __extends(EventsAssistant, BaseAssistant);
+  function EventsAssistant(params) {
     if (params == null) {
       params = {};
     }
@@ -23,15 +23,13 @@ ComingUpAssistant = (function() {
     this.priorityFormatter = __bind(this.priorityFormatter, this);
     this.whenFormatter = __bind(this.whenFormatter, this);
     this.textFieldChanged = __bind(this.textFieldChanged, this);
-    this.dragDrop = __bind(this.dragDrop, this);
-    this.dragHover = __bind(this.dragHover, this);
-    this.dragLeave = __bind(this.dragLeave, this);
-    this.dragEnter = __bind(this.dragEnter, this);
+    this.dragEndHandler = __bind(this.dragEndHandler, this);
+    this.draggingHandler = __bind(this.draggingHandler, this);
     this.dragStartHandler = __bind(this.dragStartHandler, this);
     this.tapOk = __bind(this.tapOk, this);
     this.tapCancel = __bind(this.tapCancel, this);
     this.dividerFunction = __bind(this.dividerFunction, this);
-    ComingUpAssistant.__super__.constructor.apply(this, arguments);
+    EventsAssistant.__super__.constructor.apply(this, arguments);
     this.events = {
       items: []
     };
@@ -41,13 +39,10 @@ ComingUpAssistant = (function() {
     };
     Mojo.Log.info(JSON.stringify(this.params));
   }
-  ComingUpAssistant.prototype.setupMenu = function() {
+  EventsAssistant.prototype.setupMenu = function() {
     var menu_items;
     menu_items = [
       {
-        label: "Preferences",
-        command: Mojo.Menu.prefsCmd
-      }, {
         label: "About",
         command: 'about-scene'
       }
@@ -59,7 +54,7 @@ ComingUpAssistant = (function() {
       items: menu_items
     });
   };
-  ComingUpAssistant.prototype.setupDates = function() {
+  EventsAssistant.prototype.setupDates = function() {
     this.today = Date.today();
     this.tomorrow = Date.today().addDays(1);
     this.after_tomorrow = Date.today().addDays(2);
@@ -68,17 +63,18 @@ ComingUpAssistant = (function() {
     this.new_years_day = Date.today().moveToMonth(0);
     return this.month_names = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   };
-  ComingUpAssistant.prototype.setup = function() {
-    ComingUpAssistant.__super__.setup.apply(this, arguments);
+  EventsAssistant.prototype.setup = function() {
+    EventsAssistant.__super__.setup.apply(this, arguments);
     this.controller.setupWidget("bodyTextFieldId", {
-      focusMode: Mojo.Widget.focusSelectMode,
+      focusMode: Mojo.Widget.focusAppendMode,
       multiline: true
     }, this.bodyModel);
     this.controller.setupWidget("textFieldId", this.attributes = {
       hintText: $L("I want to..."),
       enterSubmits: true,
       requiresEnterKey: true,
-      autoFocus: false
+      autoFocus: true,
+      focus: true
     }, this.model = {
       value: '',
       disabled: false
@@ -89,20 +85,20 @@ ComingUpAssistant = (function() {
     this.setupDates();
     this.setupMenu();
     return this.controller.setupWidget("list", {
-      itemTemplate: "coming-up/event",
+      itemTemplate: "events/event",
       swipeToDelete: false,
       hasNoWidgets: true,
       initialAverageRowHeight: 48,
       reorderable: true,
       dividerFunction: this.dividerFunction,
-      dividerTemplate: "coming-up/divider-template",
+      dividerTemplate: "events/divider-template",
       formatters: {
         when: this.whenFormatter,
         priority: this.priorityFormatter
       }
     }, this.events);
   };
-  ComingUpAssistant.prototype.dividerFunction = function(model) {
+  EventsAssistant.prototype.dividerFunction = function(model) {
     var w;
     w = Date.parse(model.when.substr(0, 4) + "-" + model.when.substr(4, 2) + "-" + model.when.substr(6, 2));
     if (this.today.isAfter(w)) {
@@ -126,84 +122,88 @@ ComingUpAssistant = (function() {
     return this.month_names[w.getMonth()];
     return 'later';
   };
-  ComingUpAssistant.prototype.activate = function(event) {
-    ComingUpAssistant.__super__.activate.apply(this, arguments);
-    this.controller.get("floater").hide();
-    this.addListeners([this.controller.get("list"), Mojo.Event.listTap, this.itemTapped], [this.controller.get("list"), Mojo.Event.listDelete, this.handleDeleteItem], [this.controller.get("textFieldId"), Mojo.Event.propertyChange, this.textFieldChanged], [this.controller.get("list"), Mojo.Event.dragStart, this.dragStartHandler], [this.controller.get("cancel"), Mojo.Event.tap, this.tapCancel], [this.controller.get("ok"), Mojo.Event.tap, this.tapOk]);
+  EventsAssistant.prototype.activate = function(event) {
+    EventsAssistant.__super__.activate.apply(this, arguments);
+    this.controller.get("edit-floater").hide();
+    this.addListeners([this.controller.get("list"), Mojo.Event.listTap, this.itemTapped], [this.controller.get("list"), Mojo.Event.listDelete, this.handleDeleteItem], [this.controller.get("textFieldId"), Mojo.Event.propertyChange, this.textFieldChanged], [this.controller.get("list"), Mojo.Event.dragStart, this.dragStartHandler], [this.controller.get("list"), Mojo.Event.dragging, this.draggingHandler], [this.controller.get("list"), Mojo.Event.dragEnd, this.dragEndHandler], [this.controller.get("edit-cancel"), Mojo.Event.tap, this.tapCancel], [this.controller.get("edit-ok"), Mojo.Event.tap, this.tapOk]);
     if (this.events.items.length === 0) {
       return this.loadEvents();
     }
   };
-  ComingUpAssistant.prototype.tapCancel = function(event) {
-    return this.controller.get("floater").hide();
+  EventsAssistant.prototype.tapCancel = function(event) {
+    return this.controller.get("edit-floater").hide();
   };
-  ComingUpAssistant.prototype.tapOk = function(event) {
+  EventsAssistant.prototype.tapOk = function(event) {
     this.events.items[this.editIndex].event = this.controller.get('bodyTextFieldId').mojo.getValue();
     this.saveEvents();
     this.controller.get('list').mojo.noticeUpdatedItems(this.editIndex, [this.events.items[this.editIndex]]);
     this.controller.get('bodyTextFieldId').mojo.setValue("");
-    return this.controller.get("floater").hide();
+    return this.controller.get("edit-floater").hide();
   };
-  ComingUpAssistant.prototype.dragStartHandler = function(event) {
-    var draggy, node;
-    if (Math.abs(event.filteredDistance.x) > Math.abs(event.filteredDistance.y) * 2) {
-      this.crossing_off = true;
-      node = event.target.up(".thing");
-      node.insert('<div class="draggable-thingy"></div>', {
-        position: 'before'
-      });
-      Mojo.Drag.setupDropContainer(node, this);
-      draggy = node.down(".draggable-thingy");
-      draggy.style.left = event.x;
-      draggy.style.top = event.y;
-      node._dragObj = Mojo.Drag.startDragging(this.controller, draggy, event.down, {
-        preventVertical: false,
-        draggingClass: "draggy",
-        preventDropReset: false
-      });
-      return event.stop();
-    }
+  EventsAssistant.prototype.dragStartHandler = function(event) {
+    var item, thing;
+    thing = event.target.up(".thing");
+    item = this.controller.get('list').mojo.getItemByNode(thing);
+    this.dragging = true;
+    return this.drag = {
+      start: {
+        x: event.down.x,
+        y: event.down.y,
+        event_id: item.id
+      },
+      end: {}
+    };
   };
-  ComingUpAssistant.prototype.dragEnter = function(element) {
-    return Banner.send("drag enter");
+  EventsAssistant.prototype.draggingHandler = function(event) {
+    var item, thing;
+    thing = event.target.up(".thing");
+    item = this.controller.get('list').mojo.getItemByNode(thing);
+    this.drag.end.x = event.move.x;
+    this.drag.end.y = event.move.y;
+    return this.drag.end.event_id = item.id;
   };
-  ComingUpAssistant.prototype.dragLeave = function(element) {
-    Banner.send("drag leave");
-    return this.crossing_off = false;
+  EventsAssistant.prototype.dragEndHandler = function(event) {
+    Banner.send('drag end!');
+    this.dragging = false;
+    return this.drag = {};
   };
-  ComingUpAssistant.prototype.dragHover = function(element) {};
-  ComingUpAssistant.prototype.markThingAsDone = function(index) {
+  EventsAssistant.prototype.markThingAsDone = function(index) {
     var el, event, thing;
     thing = this.controller.get("list").mojo.getNodeByIndex(index);
     event = this.events.items[index];
-    event.crossed_off = true;
+    if (event.crossed_off === true) {
+      return;
+    }
     event.event = "<s><s><s>" + event.event + "</s></s></s>";
+    event.crossed_off = true;
     this.saveEvents();
     el = thing.down(".event-holder");
-    el.update(event.event);
-    return this.crossing_off = false;
+    return el.update(event.event);
   };
-  ComingUpAssistant.prototype.dragDrop = function(element) {
-    var content, el;
-    Banner.send("drag drop: " + this.crossing_off);
-    if (this.crossing_off) {
-      el = element.up(".thing").down(".event-holder");
-      content = "<s>" + el.innerHTML + "</s>";
-      el.update(content);
-      return this.crossing_off = false;
+  EventsAssistant.prototype.markThingAsUndone = function(index) {
+    var el, event, thing;
+    thing = this.controller.get("list").mojo.getNodeByIndex(index);
+    event = this.events.items[index];
+    if (event.crossed_off !== true) {
+      return;
     }
+    event.event = event.event.replace(/\<s\>/g, "").replace(/\<\/s\>/g, "");
+    event.crossed_off = false;
+    this.saveEvents();
+    el = thing.down(".event-holder");
+    return el.update(event.event);
   };
-  ComingUpAssistant.prototype.deactivate = function(event) {
-    return ComingUpAssistant.__super__.deactivate.apply(this, arguments);
+  EventsAssistant.prototype.deactivate = function(event) {
+    return EventsAssistant.__super__.deactivate.apply(this, arguments);
   };
-  ComingUpAssistant.prototype.cleanup = function(event) {
-    return ComingUpAssistant.__super__.cleanup.apply(this, arguments);
+  EventsAssistant.prototype.cleanup = function(event) {
+    return EventsAssistant.__super__.cleanup.apply(this, arguments);
   };
-  ComingUpAssistant.prototype.ready = function() {
+  EventsAssistant.prototype.ready = function() {
     this.controller.get('content-area').style.height = "" + (this.controller.window.innerHeight - 50) + "px";
     return this.controller.get('list-scroller').style.height = "" + (this.controller.window.innerHeight - 50) + "px";
   };
-  ComingUpAssistant.prototype.textFieldChanged = function(event) {
+  EventsAssistant.prototype.textFieldChanged = function(event) {
     var value;
     value = this.controller.get('textFieldId').mojo.getValue();
     if (value !== "") {
@@ -214,7 +214,7 @@ ComingUpAssistant = (function() {
       return this.controller.get('textFieldId').mojo.focus();
     }, this), 10);
   };
-  ComingUpAssistant.prototype.whenFormatter = function(propertyValue, model) {
+  EventsAssistant.prototype.whenFormatter = function(propertyValue, model) {
     var string, w;
     if (model.when == null) {
       return "";
@@ -223,33 +223,33 @@ ComingUpAssistant = (function() {
     string = w.substr(0, 4) + '/' + w.substr(4, 2) + '/' + w.substr(6, 2) + ' at ' + w.substr(8, 2);
     return string;
   };
-  ComingUpAssistant.prototype.priorityFormatter = function(propertyValue, model) {
+  EventsAssistant.prototype.priorityFormatter = function(propertyValue, model) {
     if (model.priority === true) {
       return "priority";
     }
     return "";
   };
-  ComingUpAssistant.prototype.handleDeleteItem = function(event) {
+  EventsAssistant.prototype.handleDeleteItem = function(event) {
     this.events.items.splice(event.index, 1);
     return this.saveEvents();
   };
-  ComingUpAssistant.prototype.saveEvents = function() {
+  EventsAssistant.prototype.saveEvents = function() {
     return this.depot.add('events', JSON.stringify(this.events.items));
   };
-  ComingUpAssistant.prototype.loadEvents = function() {
+  EventsAssistant.prototype.loadEvents = function() {
     return this.depot = new Mojo.Depot({
       name: 'events'
     }, __bind(function() {
       return this.depot.get('events', this.handleLoadEventsResponse, __bind(function() {}, this));
     }, this), __bind(function() {}, this));
   };
-  ComingUpAssistant.prototype.processDateString = function(string) {
+  EventsAssistant.prototype.processDateString = function(string) {
     return Date.parse(string).toString("yyyyMMdd");
   };
-  ComingUpAssistant.prototype.processTimeString = function(string) {
+  EventsAssistant.prototype.processTimeString = function(string) {
     return Date.parse(string).toString("HHmmss");
   };
-  ComingUpAssistant.prototype.processNewEvent = function(event) {
+  EventsAssistant.prototype.processNewEvent = function(event) {
     var date_string, datetime_string, event_string, indexOfAt, indexOfOn, on_terms, term, terms, time_string, _i, _len;
     event = event.replace(/\%20/g, " ");
     Mojo.Log.info("add new event!");
@@ -300,7 +300,7 @@ ComingUpAssistant = (function() {
       id: new Date().getTime()
     };
   };
-  ComingUpAssistant.prototype.addNewEvent = function(string) {
+  EventsAssistant.prototype.addNewEvent = function(string) {
     var event;
     event = this.processNewEvent(string);
     Mojo.Log.info(JSON.stringify(event));
@@ -312,7 +312,7 @@ ComingUpAssistant = (function() {
     this.controller.modelChanged(this.events);
     return this.saveEvents();
   };
-  ComingUpAssistant.prototype.handleLoadEventsResponse = function(response) {
+  EventsAssistant.prototype.handleLoadEventsResponse = function(response) {
     var event, _ref, _ref2;
     Mojo.Log.info(JSON.stringify(response));
     if (response !== null) {
@@ -329,7 +329,7 @@ ComingUpAssistant = (function() {
     this.controller.modelChanged(this.events);
     return this.saveEvents();
   };
-  ComingUpAssistant.prototype.togglePriority = function(index) {
+  EventsAssistant.prototype.togglePriority = function(index) {
     var item, thing;
     item = this.events.items[index];
     thing = this.controller.get("list").mojo.getNodeByIndex(index);
@@ -341,8 +341,22 @@ ComingUpAssistant = (function() {
       return thing.removeClassName('priority');
     }
   };
-  ComingUpAssistant.prototype.itemTapped = function(event) {
+  EventsAssistant.prototype.itemTapped = function(event) {
     var element_tapped, note, old_thing, text, thing;
+    if (this.dragging) {
+      this.dragging = false;
+      if (this.drag.start.event_id === this.drag.end.event_id) {
+        if (this.drag.start.x < (this.drag.end.x - 100)) {
+          Banner.send("drag right!");
+          this.markThingAsDone(event.index);
+        } else if (this.drag.start.x > (this.drag.end.x + 100)) {
+          Banner.send("drag left!");
+          this.markThingAsUndone(event.index);
+        }
+      }
+      return;
+    }
+    Banner.send('list tap!');
     note = this.events.items[event.index];
     if (note.crossed_off === true) {
       return;
@@ -362,11 +376,11 @@ ComingUpAssistant = (function() {
         });
       } else if (element_tapped.className.indexOf('option-edit') !== -1) {
         this.editIndex = event.index;
-        this.controller.get("floater").show();
+        this.controller.get("edit-floater").show();
         text = this.events.items[event.index].event;
         this.controller.get('bodyTextFieldId').mojo.setValue(text);
         Mojo.Log.info(this.controller.get('bodyTextFieldId').innerHTML);
-        this.controller.get("floater").show();
+        this.controller.get("edit-floater").show();
         this.controller.get('bodyTextFieldId').mojo.focus();
       } else if (element_tapped.className.indexOf('option-done') !== -1) {
         this.markThingAsDone(event.index);
@@ -389,17 +403,17 @@ ComingUpAssistant = (function() {
     this.selectThing(thing);
     return this.selectedIndex = event.index;
   };
-  ComingUpAssistant.prototype.selectThing = function(thing) {
+  EventsAssistant.prototype.selectThing = function(thing) {
     this.addOptions(thing);
     return thing.addClassName('selected');
   };
-  ComingUpAssistant.prototype.deselectThing = function(thing) {
+  EventsAssistant.prototype.deselectThing = function(thing) {
     thing.removeClassName('selected');
     if (thing.down(".event-options")) {
       return thing.down(".event-options").remove();
     }
   };
-  ComingUpAssistant.prototype.addOptions = function(thing) {
+  EventsAssistant.prototype.addOptions = function(thing) {
     return thing.insert('<div class="event-options">\
       <div class="event-option option-priority">Priority</div>\
       <div class="event-option option-reminder">Reminder</div>\
@@ -408,7 +422,7 @@ ComingUpAssistant = (function() {
       <div class="event-option option-done">Done</div>\
     </div>');
   };
-  ComingUpAssistant.prototype.handleCommand = function(event) {
+  EventsAssistant.prototype.handleCommand = function(event) {
     if (event.type !== Mojo.Event.command) {
       return;
     }
@@ -427,5 +441,5 @@ ComingUpAssistant = (function() {
         return AppAssistant.open_purchase_link();
     }
   };
-  return ComingUpAssistant;
+  return EventsAssistant;
 })();

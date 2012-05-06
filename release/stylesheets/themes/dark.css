@@ -28,6 +28,24 @@ body.palm-default {
   padding: 0px;
 }
 
+.about-scene {
+  font-size: large;
+  color: white !important;
+}
+
+#about-header-bar {
+  font-size: 30px;
+  text-align: center;
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  height: 105px;
+  width: 100%;
+  background-color: black;
+  margin: 0px;
+  padding: 0px;
+}
+
 #content-area {
   position: absolute;
   left: 0px;
@@ -61,7 +79,7 @@ body.palm-default {
   margin: 0px;
   overflow: auto;
   border-bottom: 1px solid #222222;
-  height: 48px;
+  /*height: 48px;*/
   -webkit-transition-property: height;
   -webkit-transition-duration: 0.5s;
   -webkit-transition-timing-function: 'ease-out';
@@ -131,7 +149,7 @@ body.palm-default {
 
 #bodyTextFieldId .text-edit {
   color: white;
-  border: 1px solid yellow;
+  /*border: 1px solid yellow;*/
   margin: 5px !important;
   padding: 5px !important;
   min-height: 15px !important;
@@ -207,10 +225,12 @@ body.palm-default {
 .event-options {
   /*opacity: 0;*/
   height: 36px;
-  width: 100%;
+  /*width: 100%;*/
   /*border: 1px solid red;*/
   padding: 0px;
-  margin: 6px;
+  margin: 0px;
+  left: 10px;
+  right: 10px;
   -webkit-transition-property: opacity;
   -webkit-transition-duration: 0.5s;
   -webkit-transition-timing-function: 'ease-out';

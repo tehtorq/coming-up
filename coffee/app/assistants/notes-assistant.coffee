@@ -5,6 +5,7 @@ class NotesAssistant extends BaseAssistant
     
     @notes = { items : [] }
     @event = params.event
+    @bodyModel = { value : '' }
     
     Mojo.Log.info(JSON.stringify(@event))
     
@@ -17,6 +18,20 @@ class NotesAssistant extends BaseAssistant
       
   setup: ->
     super
+    
+    @controller.setupWidget("bodyTextFieldId",
+      { focusMode : Mojo.Widget.focusAppendMode, multiline: true },
+      @bodyModel
+    )
+    
+    if @showBackNavigation()
+      @viewMenuModel = {
+        items: [
+          {label: $L('Back'), icon:'', command:'back', width:80}
+        ]
+      }
+
+      @controller.setupWidget(Mojo.Menu.commandMenu, { menuClass:'no-fade' }, @viewMenuModel)
     
     @controller.setupWidget("textFieldId"
       @attributes =
@@ -37,21 +52,34 @@ class NotesAssistant extends BaseAssistant
       itemTemplate: "notes/note"
       swipeToDelete: false
       hasNoWidgets: true
-      initialAverageRowHeight: 48
+      # initialAverageRowHeight: 48
       reorderable: true
       }, @notes)
   
   activate: (event) ->
     super
+    @controller.get("edit-floater").hide()
     
     @addListeners(
       [@controller.get("list"), Mojo.Event.listTap, @itemTapped]
       [@controller.get("textFieldId"), Mojo.Event.propertyChange, @textFieldChanged]
       [@controller.get("list"), Mojo.Event.dragStart, @dragStartHandler]
+      [@controller.get("edit-cancel"), Mojo.Event.tap, @tapCancel]
+      [@controller.get("edit-ok"), Mojo.Event.tap, @tapOk]
     )
 
     if @notes.items.length is 0
       @loadNotes()
+      
+  tapCancel: (event) =>
+    @controller.get("edit-floater").hide()
+
+  tapOk: (event) =>
+    @notes.items[@editIndex].text = @controller.get('bodyTextFieldId').mojo.getValue()
+    @saveNotes()
+    @controller.get('list').mojo.noticeUpdatedItems(@editIndex, [@notes.items[@editIndex]])
+    @controller.get('bodyTextFieldId').mojo.setValue("")
+    @controller.get("edit-floater").hide()
       
   dragStartHandler: (event) =>
     if (Math.abs(event.filteredDistance.x) > Math.abs(event.filteredDistance.y) * 2)
@@ -148,23 +176,20 @@ class NotesAssistant extends BaseAssistant
   itemTapped: (event) =>
     element_tapped = event.originalEvent.target
     
-    Banner.send('note tapped')
-    
-    thing = @controller.get("list").mojo.getNodeByIndex(event.index)
-    @selectThing(thing)
-  
-  selectThing: (thing) =>
-    @addOptions(thing)
-    thing.addClassName('selected')
-    
-  deselectThing: (thing) =>
-    thing.removeClassName('selected')
-    thing.down(".event-options").remove() if thing.down(".event-options")
-    
+    @editIndex = event.index
+    @controller.get("edit-floater").show()
+    text = @notes.items[event.index].text
+    @controller.get('bodyTextFieldId').mojo.setValue(text)
+    Mojo.Log.info @controller.get('bodyTextFieldId').innerHTML
+    @controller.get("edit-floater").show()
+    @controller.get('bodyTextFieldId').mojo.focus()
+      
   handleCommand: (event) ->
     return if event.type isnt Mojo.Event.command
     
     switch event.command
+      when 'back'
+        @controller.stageController.popScene()
       when 'about-scene'
         @controller.stageController.pushScene({name:"about"}, {})
       when 'donation-cmd'

@@ -7,7 +7,7 @@ class AppAssistant
     params = {action: launchParams.searchString} if launchParams and launchParams.searchString
     
     pushCard = (stageController) =>
-      stageController.pushScene({name: "coming-up", disableSceneScroller: true}, params)
+      stageController.pushScene({name: "events", disableSceneScroller: true}, params)
 
-    Mojo.Controller.getAppController().createStageWithCallback({name: "coming-up", disableSceneScroller: true}, pushCard, "card")
+    Mojo.Controller.getAppController().createStageWithCallback({name: "events", disableSceneScroller: true}, pushCard, "card")
         

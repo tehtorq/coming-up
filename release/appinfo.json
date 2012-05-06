@@ -1,22 +1,21 @@
 {
   "uiRevision": "2",
-	"id": "com.tehtorq.coming-up",
+	"id": "com.tehtorq.incoming-hb",
 	"version": "0.0.1",
 	"vendor": "tehtorq",
 	"type": "web",
 	"main": "index.html",
   "dockMode": true,
   "touchstoneMode": "enabled",
-	"title": "Coming Up",
+	"title": "Incoming!",
 	"icon": "icon.png",
 	"noWindow": true,
   "splashicon": "images/splash-small.png",
-	"splashBackground": "images/splash.png",
   "noDeprecatedStyles":true,
   "universalSearch":{
       "action" :  {
-          "displayName": "Coming Up",
-          "url":"com.tehtorq.coming-up",
+          "displayName": "Incoming!",
+          "url":"com.tehtorq.incoming-hb",
           "launchParam":"searchString"
       }
   },

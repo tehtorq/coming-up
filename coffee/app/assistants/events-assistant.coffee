@@ -1,4 +1,4 @@
-class ComingUpAssistant extends BaseAssistant
+class EventsAssistant extends BaseAssistant
   
   constructor: (params = {}) ->
     super
@@ -11,7 +11,7 @@ class ComingUpAssistant extends BaseAssistant
     
   setupMenu: ->
     menu_items = [
-      {label: "Preferences", command: Mojo.Menu.prefsCmd}
+      # {label: "Preferences", command: Mojo.Menu.prefsCmd}
       {label: "About", command: 'about-scene'}
     ]
 
@@ -44,7 +44,7 @@ class ComingUpAssistant extends BaseAssistant
     super
     
     @controller.setupWidget("bodyTextFieldId",
-      { focusMode : Mojo.Widget.focusSelectMode, multiline: true },
+      { focusMode : Mojo.Widget.focusAppendMode, multiline: true },
       @bodyModel
     )
     
@@ -53,7 +53,8 @@ class ComingUpAssistant extends BaseAssistant
         hintText: $L("I want to...")
         enterSubmits: true
         requiresEnterKey: true
-        autoFocus: false
+        autoFocus: true
+        focus: true
       @model =
         value: ''
         disabled: false
@@ -65,13 +66,13 @@ class ComingUpAssistant extends BaseAssistant
     @setupMenu()
     
     @controller.setupWidget("list", {
-      itemTemplate: "coming-up/event"
+      itemTemplate: "events/event"
       swipeToDelete: false
       hasNoWidgets: true
       initialAverageRowHeight: 48
       reorderable: true
       dividerFunction: @dividerFunction
-      dividerTemplate: "coming-up/divider-template"
+      dividerTemplate: "events/divider-template"
       formatters: 
         when: @whenFormatter
         priority: @priorityFormatter
@@ -92,85 +93,76 @@ class ComingUpAssistant extends BaseAssistant
 
   activate: (event) ->
     super
-    @controller.get("floater").hide()
+    @controller.get("edit-floater").hide()
     
     @addListeners(
       [@controller.get("list"), Mojo.Event.listTap, @itemTapped]
       [@controller.get("list"), Mojo.Event.listDelete, @handleDeleteItem]
       [@controller.get("textFieldId"), Mojo.Event.propertyChange, @textFieldChanged]
       [@controller.get("list"), Mojo.Event.dragStart, @dragStartHandler]
-      [@controller.get("cancel"), Mojo.Event.tap, @tapCancel]
-      [@controller.get("ok"), Mojo.Event.tap, @tapOk]
+      [@controller.get("list"), Mojo.Event.dragging, @draggingHandler]
+      [@controller.get("list"), Mojo.Event.dragEnd, @dragEndHandler]
+      [@controller.get("edit-cancel"), Mojo.Event.tap, @tapCancel]
+      [@controller.get("edit-ok"), Mojo.Event.tap, @tapOk]
     )
 
     if @events.items.length is 0
       @loadEvents()
 
   tapCancel: (event) =>
-    @controller.get("floater").hide()
+    @controller.get("edit-floater").hide()
     
   tapOk: (event) =>
     @events.items[@editIndex].event = @controller.get('bodyTextFieldId').mojo.getValue()
     @saveEvents()
     @controller.get('list').mojo.noticeUpdatedItems(@editIndex, [@events.items[@editIndex]])
     @controller.get('bodyTextFieldId').mojo.setValue("")
-    @controller.get("floater").hide()
+    @controller.get("edit-floater").hide()
           
-  dragStartHandler: (event) =>
-    if (Math.abs(event.filteredDistance.x) > Math.abs(event.filteredDistance.y) * 2)
-      @crossing_off = true
-      node = event.target.up(".thing")
-      node.insert('<div class="draggable-thingy"></div>', { position: 'before' })
-      Mojo.Drag.setupDropContainer(node, @)
-      
-      draggy = node.down(".draggable-thingy")
-      draggy.style.left = event.x
-      draggy.style.top = event.y
-
-      node._dragObj = Mojo.Drag.startDragging(@controller, draggy, event.down, {
-        preventVertical: false,
-        draggingClass: "draggy",
-        preventDropReset: false
-      })
-
-      event.stop()
-      
-  dragEnter: (element) =>
-    Banner.send "drag enter"
+  dragStartHandler: (event) =>  
+    thing = event.target.up(".thing")
+    item = @controller.get('list').mojo.getItemByNode(thing)
     
-  dragLeave: (element) =>
-    Banner.send "drag leave"
-    @crossing_off = false
-
-  dragHover: (element) =>
-  #   if (element.offsetLeft > 200 or element.offsetLeft < -200)
-  #     Mojo.Log.info "true?"
-  #     #@swipeMenu.show = true
-  #   else
-  #     @crossing_off = false
-  #     Mojo.Log.info "false?"
-  #     #@swipeMenu.show = false  
+    @dragging = true
+    @drag = {start: {x: event.down.x, y: event.down.y, event_id: item.id}, end: {}}
+      
+  draggingHandler: (event) =>
+    thing = event.target.up(".thing")
+    item = @controller.get('list').mojo.getItemByNode(thing)
+    
+    @drag.end.x = event.move.x
+    @drag.end.y = event.move.y
+    @drag.end.event_id = item.id
+    
+  dragEndHandler: (event) =>
+    Banner.send('drag end!')
+    @dragging = false
+    @drag = {}
   
   markThingAsDone: (index) ->
     thing = @controller.get("list").mojo.getNodeByIndex(index)
     event = @events.items[index]
-    event.crossed_off = true
+    return if event.crossed_off is true
+    
     event.event = "<s><s><s>#{event.event}</s></s></s>"
+    event.crossed_off = true
     @saveEvents()
     
     el = thing.down(".event-holder")
     el.update(event.event)
-    @crossing_off = false
-
-  dragDrop: (element) =>
-    Banner.send "drag drop: #{@crossing_off}"
-    
-    if @crossing_off
-      el = element.up(".thing").down(".event-holder")
-      content = "<s>" + el.innerHTML + "</s>"
-      el.update(content)
-      @crossing_off = false
   
+  markThingAsUndone: (index) ->
+    thing = @controller.get("list").mojo.getNodeByIndex(index)
+    event = @events.items[index]
+    return unless event.crossed_off is true
+    
+    event.event = event.event.replace(/\<s\>/g, "").replace(/\<\/s\>/g, "")
+    event.crossed_off = false
+    @saveEvents()
+
+    el = thing.down(".event-holder")
+    el.update(event.event)
+      
   deactivate: (event) ->
     super
   
@@ -310,6 +302,24 @@ class ComingUpAssistant extends BaseAssistant
       thing.removeClassName('priority')
   
   itemTapped: (event) =>
+    if @dragging
+      @dragging = false
+      
+      if @drag.start.event_id is @drag.end.event_id
+        if @drag.start.x < (@drag.end.x - 100)
+          Banner.send("drag right!")
+          @markThingAsDone(event.index)
+        else if @drag.start.x > (@drag.end.x + 100)
+          Banner.send("drag left!")
+          @markThingAsUndone(event.index)
+          
+          
+      
+      #@drag = {start: {x: event.down.x, y: event.down.y, index: index}}
+      
+      return
+      
+    Banner.send('list tap!')      
     note = @events.items[event.index]
     
     return if note.crossed_off is true
@@ -326,11 +336,11 @@ class ComingUpAssistant extends BaseAssistant
         @controller.stageController.pushScene({name:"notes"}, {event: @events.items[event.index]})
       else if element_tapped.className.indexOf('option-edit') isnt -1
         @editIndex = event.index
-        @controller.get("floater").show()
+        @controller.get("edit-floater").show()
         text = @events.items[event.index].event
         @controller.get('bodyTextFieldId').mojo.setValue(text)
         Mojo.Log.info @controller.get('bodyTextFieldId').innerHTML
-        @controller.get("floater").show()
+        @controller.get("edit-floater").show()
         @controller.get('bodyTextFieldId').mojo.focus()
       else if element_tapped.className.indexOf('option-done') isnt -1
         @markThingAsDone(event.index)

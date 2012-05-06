@@ -13,12 +13,12 @@ AppAssistant = (function() {
     }
     pushCard = __bind(function(stageController) {
       return stageController.pushScene({
-        name: "coming-up",
+        name: "events",
         disableSceneScroller: true
       }, params);
     }, this);
     return Mojo.Controller.getAppController().createStageWithCallback({
-      name: "coming-up",
+      name: "events",
       disableSceneScroller: true
     }, pushCard, "card");
   };

@@ -11,8 +11,8 @@
     {"source": "app/assistants/power-scroll-base.js"},
     {"source": "app/assistants/app-assistant.js"},
     {
-        "scenes": "coming-up",
-        "source": "app/assistants/coming-up-assistant.js"
+        "scenes": "events",
+        "source": "app/assistants/events-assistant.js"
     },
     {
         "scenes": "notes",
