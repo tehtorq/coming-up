@@ -20,10 +20,8 @@ NotesAssistant = (function() {
     this.saveNotes = __bind(this.saveNotes, this);
     this.handleDeleteItem = __bind(this.handleDeleteItem, this);
     this.textFieldChanged = __bind(this.textFieldChanged, this);
-    this.dragDrop = __bind(this.dragDrop, this);
-    this.dragHover = __bind(this.dragHover, this);
-    this.dragLeave = __bind(this.dragLeave, this);
-    this.dragEnter = __bind(this.dragEnter, this);
+    this.dragEndHandler = __bind(this.dragEndHandler, this);
+    this.draggingHandler = __bind(this.draggingHandler, this);
     this.dragStartHandler = __bind(this.dragStartHandler, this);
     this.tapOk = __bind(this.tapOk, this);
     this.tapCancel = __bind(this.tapCancel, this);
@@ -96,7 +94,7 @@ NotesAssistant = (function() {
   NotesAssistant.prototype.activate = function(event) {
     NotesAssistant.__super__.activate.apply(this, arguments);
     this.controller.get("edit-floater").hide();
-    this.addListeners([this.controller.get("list"), Mojo.Event.listTap, this.itemTapped], [this.controller.get("textFieldId"), Mojo.Event.propertyChange, this.textFieldChanged], [this.controller.get("list"), Mojo.Event.dragStart, this.dragStartHandler], [this.controller.get("edit-cancel"), Mojo.Event.tap, this.tapCancel], [this.controller.get("edit-ok"), Mojo.Event.tap, this.tapOk]);
+    this.addListeners([this.controller.get("list"), Mojo.Event.listTap, this.itemTapped], [this.controller.get("textFieldId"), Mojo.Event.propertyChange, this.textFieldChanged], [this.controller.get("list"), Mojo.Event.dragStart, this.dragStartHandler], [this.controller.get("list"), Mojo.Event.dragging, this.draggingHandler], [this.controller.get("list"), Mojo.Event.dragEnd, this.dragEndHandler], [this.controller.get("edit-cancel"), Mojo.Event.tap, this.tapCancel], [this.controller.get("edit-ok"), Mojo.Event.tap, this.tapOk]);
     if (this.notes.items.length === 0) {
       return this.loadNotes();
     }
@@ -112,42 +110,30 @@ NotesAssistant = (function() {
     return this.controller.get("edit-floater").hide();
   };
   NotesAssistant.prototype.dragStartHandler = function(event) {
-    var draggy, node;
-    if (Math.abs(event.filteredDistance.x) > Math.abs(event.filteredDistance.y) * 2) {
-      this.crossing_off = true;
-      node = event.target.up(".thing");
-      node.insert('<div class="draggable-thingy"></div>', {
-        position: 'before'
-      });
-      Mojo.Drag.setupDropContainer(node, this);
-      draggy = node.down(".draggable-thingy");
-      draggy.style.left = event.x;
-      draggy.style.top = event.y;
-      node._dragObj = Mojo.Drag.startDragging(this.controller, draggy, event.down, {
-        preventVertical: false,
-        draggingClass: "draggy",
-        preventDropReset: false
-      });
-      return event.stop();
-    }
+    var node, note;
+    node = event.target.up(".note");
+    note = this.controller.get('list').mojo.getItemByNode(node);
+    this.dragging = true;
+    return this.drag = {
+      start: {
+        x: event.down.x,
+        y: event.down.y,
+        note_id: note.id
+      },
+      end: {}
+    };
   };
-  NotesAssistant.prototype.dragEnter = function(element) {
-    return Banner.send("drag enter");
+  NotesAssistant.prototype.draggingHandler = function(event) {
+    var node, note;
+    node = event.target.up(".note");
+    note = this.controller.get('list').mojo.getItemByNode(node);
+    this.drag.end.x = event.move.x;
+    this.drag.end.y = event.move.y;
+    return this.drag.end.note_id = note.id;
   };
-  NotesAssistant.prototype.dragLeave = function(element) {
-    Banner.send("drag leave");
-    return this.crossing_off = false;
-  };
-  NotesAssistant.prototype.dragHover = function(element) {};
-  NotesAssistant.prototype.dragDrop = function(element) {
-    var content, el;
-    Banner.send("drag drop: " + this.crossing_off);
-    if (this.crossing_off) {
-      el = element.up(".thing").down(".event-holder");
-      content = "<s>" + el.innerHTML + "</s>";
-      el.update(content);
-      return this.crossing_off = false;
-    }
+  NotesAssistant.prototype.dragEndHandler = function(event) {
+    this.dragging = false;
+    return this.drag = {};
   };
   NotesAssistant.prototype.deactivate = function(event) {
     return NotesAssistant.__super__.deactivate.apply(this, arguments);
@@ -188,11 +174,38 @@ NotesAssistant = (function() {
     Mojo.Log.info(string);
     this.notes.items.push({
       text: string,
-      event_id: this.event.id
+      event_id: this.event.id,
+      id: new Date().getTime()
     });
     this.controller.get("list").mojo.invalidateItems(0);
     this.controller.modelChanged(this.notes);
     return this.saveNotes();
+  };
+  NotesAssistant.prototype.markNoteAsDone = function(index) {
+    var el, node, note;
+    node = this.controller.get("list").mojo.getNodeByIndex(index);
+    note = this.notes.items[index];
+    if (note.crossed_off === true) {
+      return;
+    }
+    note.text = "<s><s><s>" + note.text + "</s></s></s>";
+    note.crossed_off = true;
+    this.saveNotes();
+    el = node.down(".note-content");
+    return el.update(note.text);
+  };
+  NotesAssistant.prototype.markNoteAsUndone = function(index) {
+    var el, node, note;
+    node = this.controller.get("list").mojo.getNodeByIndex(index);
+    note = this.notes.items[index];
+    if (note.crossed_off !== true) {
+      return;
+    }
+    note.text = note.text.replace(/\<s\>/g, "").replace(/\<\/s\>/g, "");
+    note.crossed_off = false;
+    this.saveNotes();
+    el = node.down(".note-content");
+    return el.update(note.text);
   };
   NotesAssistant.prototype.handleLoadNotesResponse = function(response) {
     var notes;
@@ -208,6 +221,17 @@ NotesAssistant = (function() {
   };
   NotesAssistant.prototype.itemTapped = function(event) {
     var element_tapped, text;
+    if (this.dragging) {
+      this.dragging = false;
+      if (this.drag.start.note_id === this.drag.end.note_id) {
+        if (this.drag.start.x < (this.drag.end.x - 100)) {
+          this.markNoteAsDone(event.index);
+        } else if (this.drag.start.x > (this.drag.end.x + 100)) {
+          this.markNoteAsUndone(event.index);
+        }
+      }
+      return;
+    }
     element_tapped = event.originalEvent.target;
     this.editIndex = event.index;
     this.controller.get("edit-floater").show();

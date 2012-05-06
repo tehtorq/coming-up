@@ -163,13 +163,13 @@ EventsAssistant = (function() {
     return this.drag.end.event_id = item.id;
   };
   EventsAssistant.prototype.dragEndHandler = function(event) {
-    Banner.send('drag end!');
     this.dragging = false;
     return this.drag = {};
   };
   EventsAssistant.prototype.markThingAsDone = function(index) {
     var el, event, thing;
     thing = this.controller.get("list").mojo.getNodeByIndex(index);
+    this.deselectThing(thing);
     event = this.events.items[index];
     if (event.crossed_off === true) {
       return;
@@ -347,16 +347,13 @@ EventsAssistant = (function() {
       this.dragging = false;
       if (this.drag.start.event_id === this.drag.end.event_id) {
         if (this.drag.start.x < (this.drag.end.x - 100)) {
-          Banner.send("drag right!");
           this.markThingAsDone(event.index);
         } else if (this.drag.start.x > (this.drag.end.x + 100)) {
-          Banner.send("drag left!");
           this.markThingAsUndone(event.index);
         }
       }
       return;
     }
-    Banner.send('list tap!');
     note = this.events.items[event.index];
     if (note.crossed_off === true) {
       return;
@@ -382,9 +379,6 @@ EventsAssistant = (function() {
         Mojo.Log.info(this.controller.get('bodyTextFieldId').innerHTML);
         this.controller.get("edit-floater").show();
         this.controller.get('bodyTextFieldId').mojo.focus();
-      } else if (element_tapped.className.indexOf('option-done') !== -1) {
-        this.markThingAsDone(event.index);
-        this.deselectThing(thing);
       }
       return;
     }
@@ -419,7 +413,6 @@ EventsAssistant = (function() {
       <div class="event-option option-reminder">Reminder</div>\
       <div class="event-option option-notes">Notes</div>\
       <div class="event-option option-edit">Edit</div>\
-      <div class="event-option option-done">Done</div>\
     </div>');
   };
   EventsAssistant.prototype.handleCommand = function(event) {

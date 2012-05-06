@@ -135,12 +135,12 @@ class EventsAssistant extends BaseAssistant
     @drag.end.event_id = item.id
     
   dragEndHandler: (event) =>
-    Banner.send('drag end!')
     @dragging = false
     @drag = {}
   
   markThingAsDone: (index) ->
     thing = @controller.get("list").mojo.getNodeByIndex(index)
+    @deselectThing(thing)
     event = @events.items[index]
     return if event.crossed_off is true
     
@@ -307,19 +307,12 @@ class EventsAssistant extends BaseAssistant
       
       if @drag.start.event_id is @drag.end.event_id
         if @drag.start.x < (@drag.end.x - 100)
-          Banner.send("drag right!")
           @markThingAsDone(event.index)
         else if @drag.start.x > (@drag.end.x + 100)
-          Banner.send("drag left!")
           @markThingAsUndone(event.index)
-          
-          
-      
-      #@drag = {start: {x: event.down.x, y: event.down.y, index: index}}
       
       return
-      
-    Banner.send('list tap!')      
+    
     note = @events.items[event.index]
     
     return if note.crossed_off is true
@@ -342,9 +335,6 @@ class EventsAssistant extends BaseAssistant
         Mojo.Log.info @controller.get('bodyTextFieldId').innerHTML
         @controller.get("edit-floater").show()
         @controller.get('bodyTextFieldId').mojo.focus()
-      else if element_tapped.className.indexOf('option-done') isnt -1
-        @markThingAsDone(event.index)
-        @deselectThing(thing)
         
       return
     
@@ -375,7 +365,6 @@ class EventsAssistant extends BaseAssistant
       <div class="event-option option-reminder">Reminder</div>
       <div class="event-option option-notes">Notes</div>
       <div class="event-option option-edit">Edit</div>
-      <div class="event-option option-done">Done</div>
     </div>')
   
   handleCommand: (event) ->

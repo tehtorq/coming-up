@@ -64,6 +64,8 @@ class NotesAssistant extends BaseAssistant
       [@controller.get("list"), Mojo.Event.listTap, @itemTapped]
       [@controller.get("textFieldId"), Mojo.Event.propertyChange, @textFieldChanged]
       [@controller.get("list"), Mojo.Event.dragStart, @dragStartHandler]
+      [@controller.get("list"), Mojo.Event.dragging, @draggingHandler]
+      [@controller.get("list"), Mojo.Event.dragEnd, @dragEndHandler]
       [@controller.get("edit-cancel"), Mojo.Event.tap, @tapCancel]
       [@controller.get("edit-ok"), Mojo.Event.tap, @tapOk]
     )
@@ -82,42 +84,24 @@ class NotesAssistant extends BaseAssistant
     @controller.get("edit-floater").hide()
       
   dragStartHandler: (event) =>
-    if (Math.abs(event.filteredDistance.x) > Math.abs(event.filteredDistance.y) * 2)
-      @crossing_off = true
-      node = event.target.up(".thing")
-      node.insert('<div class="draggable-thingy"></div>', { position: 'before' })
-      Mojo.Drag.setupDropContainer(node, @)
+    node = event.target.up(".note")
+    note = @controller.get('list').mojo.getItemByNode(node)
+
+    @dragging = true
+    @drag = {start: {x: event.down.x, y: event.down.y, note_id: note.id}, end: {}}
+
+  draggingHandler: (event) =>
+    node = event.target.up(".note")
+    note = @controller.get('list').mojo.getItemByNode(node)
+
+    @drag.end.x = event.move.x
+    @drag.end.y = event.move.y
+    @drag.end.note_id = note.id
+
+  dragEndHandler: (event) =>
+    @dragging = false
+    @drag = {}
       
-      draggy = node.down(".draggable-thingy")
-      draggy.style.left = event.x
-      draggy.style.top = event.y
-
-      node._dragObj = Mojo.Drag.startDragging(@controller, draggy, event.down, {
-        preventVertical: false,
-        draggingClass: "draggy",
-        preventDropReset: false
-      })
-
-      event.stop()
-      
-  dragEnter: (element) =>
-    Banner.send "drag enter"
-    
-  dragLeave: (element) =>
-    Banner.send "drag leave"
-    @crossing_off = false
-
-  dragHover: (element) =>
-
-  dragDrop: (element) =>
-    Banner.send "drag drop: #{@crossing_off}"
-    
-    if @crossing_off
-      el = element.up(".thing").down(".event-holder")
-      content = "<s>" + el.innerHTML + "</s>"
-      el.update(content)
-      @crossing_off = false
-  
   deactivate: (event) ->
     super
   
@@ -158,10 +142,34 @@ class NotesAssistant extends BaseAssistant
       
   addNewNote: (string) =>
     Mojo.Log.info string
-    @notes.items.push({text: string, event_id: @event.id})
+    @notes.items.push({text: string, event_id: @event.id, id: new Date().getTime()})
     @controller.get("list").mojo.invalidateItems(0)
     @controller.modelChanged(@notes)
     @saveNotes()
+    
+  markNoteAsDone: (index) ->
+    node = @controller.get("list").mojo.getNodeByIndex(index)
+    note = @notes.items[index]
+    return if note.crossed_off is true
+
+    note.text = "<s><s><s>#{note.text}</s></s></s>"
+    note.crossed_off = true
+    @saveNotes()
+
+    el = node.down(".note-content")
+    el.update(note.text)
+
+  markNoteAsUndone: (index) ->
+    node = @controller.get("list").mojo.getNodeByIndex(index)
+    note = @notes.items[index]
+    return unless note.crossed_off is true
+
+    note.text = note.text.replace(/\<s\>/g, "").replace(/\<\/s\>/g, "")
+    note.crossed_off = false
+    @saveNotes()
+
+    el = node.down(".note-content")
+    el.update(note.text)
   
   handleLoadNotesResponse: (response) =>
     Mojo.Log.info "notes"
@@ -174,6 +182,17 @@ class NotesAssistant extends BaseAssistant
     @controller.modelChanged(@notes)
   
   itemTapped: (event) =>
+    if @dragging
+      @dragging = false
+    
+      if @drag.start.note_id is @drag.end.note_id
+        if @drag.start.x < (@drag.end.x - 100)
+          @markNoteAsDone(event.index)
+        else if @drag.start.x > (@drag.end.x + 100)
+          @markNoteAsUndone(event.index)
+    
+      return
+      
     element_tapped = event.originalEvent.target
     
     @editIndex = event.index
