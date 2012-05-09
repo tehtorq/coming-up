@@ -84,23 +84,32 @@ class NotesAssistant extends BaseAssistant
     @controller.get("edit-floater").hide()
       
   dragStartHandler: (event) =>
-    node = event.target.up(".note")
-    note = @controller.get('list').mojo.getItemByNode(node)
+    if node = event.target.up(".note")
+      note = @controller.get('list').mojo.getItemByNode(node)
 
-    @dragging = true
-    @drag = {start: {x: event.down.x, y: event.down.y, note_id: note.id}, end: {}}
+      @dragging = true
+      @drag = {start: {x: event.down.x, y: event.down.y, note_id: note.id}, end: {}}
 
   draggingHandler: (event) =>
-    node = event.target.up(".note")
-    note = @controller.get('list').mojo.getItemByNode(node)
+    if node = event.target.up(".note")
+      note = @controller.get('list').mojo.getItemByNode(node)
 
-    @drag.end.x = event.move.x
-    @drag.end.y = event.move.y
-    @drag.end.note_id = note.id
+      @drag.end.x = event.move.x
+      @drag.end.y = event.move.y
+      @drag.end.note_id = note.id
 
   dragEndHandler: (event) =>
-    @dragging = false
-    @drag = {}
+    if @dragging
+      @dragging = false
+      
+      if @drag.start.note_id is @drag.end.note_id
+        index = -1
+        _.each(@notes.items, (note, i) => index = i if note.id is @drag.end.note_id)
+        
+        if @drag.start.x < (@drag.end.x - 50)
+          @markNoteAsDone(index)
+        else if @drag.start.x > (@drag.end.x + 50)
+          @markNoteAsUndone(index)
       
   deactivate: (event) ->
     super
@@ -186,9 +195,9 @@ class NotesAssistant extends BaseAssistant
       @dragging = false
     
       if @drag.start.note_id is @drag.end.note_id
-        if @drag.start.x < (@drag.end.x - 100)
+        if @drag.start.x < (@drag.end.x - 50)
           @markNoteAsDone(event.index)
-        else if @drag.start.x > (@drag.end.x + 100)
+        else if @drag.start.x > (@drag.end.x + 50)
           @markNoteAsUndone(event.index)
     
       return

@@ -111,29 +111,46 @@ NotesAssistant = (function() {
   };
   NotesAssistant.prototype.dragStartHandler = function(event) {
     var node, note;
-    node = event.target.up(".note");
-    note = this.controller.get('list').mojo.getItemByNode(node);
-    this.dragging = true;
-    return this.drag = {
-      start: {
-        x: event.down.x,
-        y: event.down.y,
-        note_id: note.id
-      },
-      end: {}
-    };
+    if (node = event.target.up(".note")) {
+      note = this.controller.get('list').mojo.getItemByNode(node);
+      this.dragging = true;
+      return this.drag = {
+        start: {
+          x: event.down.x,
+          y: event.down.y,
+          note_id: note.id
+        },
+        end: {}
+      };
+    }
   };
   NotesAssistant.prototype.draggingHandler = function(event) {
     var node, note;
-    node = event.target.up(".note");
-    note = this.controller.get('list').mojo.getItemByNode(node);
-    this.drag.end.x = event.move.x;
-    this.drag.end.y = event.move.y;
-    return this.drag.end.note_id = note.id;
+    if (node = event.target.up(".note")) {
+      note = this.controller.get('list').mojo.getItemByNode(node);
+      this.drag.end.x = event.move.x;
+      this.drag.end.y = event.move.y;
+      return this.drag.end.note_id = note.id;
+    }
   };
   NotesAssistant.prototype.dragEndHandler = function(event) {
-    this.dragging = false;
-    return this.drag = {};
+    var index;
+    if (this.dragging) {
+      this.dragging = false;
+      if (this.drag.start.note_id === this.drag.end.note_id) {
+        index = -1;
+        _.each(this.notes.items, __bind(function(note, i) {
+          if (note.id === this.drag.end.note_id) {
+            return index = i;
+          }
+        }, this));
+        if (this.drag.start.x < (this.drag.end.x - 50)) {
+          return this.markNoteAsDone(index);
+        } else if (this.drag.start.x > (this.drag.end.x + 50)) {
+          return this.markNoteAsUndone(index);
+        }
+      }
+    }
   };
   NotesAssistant.prototype.deactivate = function(event) {
     return NotesAssistant.__super__.deactivate.apply(this, arguments);
@@ -224,9 +241,9 @@ NotesAssistant = (function() {
     if (this.dragging) {
       this.dragging = false;
       if (this.drag.start.note_id === this.drag.end.note_id) {
-        if (this.drag.start.x < (this.drag.end.x - 100)) {
+        if (this.drag.start.x < (this.drag.end.x - 50)) {
           this.markNoteAsDone(event.index);
-        } else if (this.drag.start.x > (this.drag.end.x + 100)) {
+        } else if (this.drag.start.x > (this.drag.end.x + 50)) {
           this.markNoteAsUndone(event.index);
         }
       }

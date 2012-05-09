@@ -69,7 +69,7 @@ class EventsAssistant extends BaseAssistant
       itemTemplate: "events/event"
       swipeToDelete: false
       hasNoWidgets: true
-      initialAverageRowHeight: 48
+      #initialAverageRowHeight: 48
       reorderable: true
       dividerFunction: @dividerFunction
       dividerTemplate: "events/divider-template"
@@ -120,23 +120,32 @@ class EventsAssistant extends BaseAssistant
     @controller.get("edit-floater").hide()
           
   dragStartHandler: (event) =>  
-    thing = event.target.up(".thing")
-    item = @controller.get('list').mojo.getItemByNode(thing)
+    if thing = event.target.up(".thing")
+      item = @controller.get('list').mojo.getItemByNode(thing)
     
-    @dragging = true
-    @drag = {start: {x: event.down.x, y: event.down.y, event_id: item.id}, end: {}}
+      @dragging = true
+      @drag = {start: {x: event.down.x, y: event.down.y, event_id: item.id}, end: {}}
       
   draggingHandler: (event) =>
-    thing = event.target.up(".thing")
-    item = @controller.get('list').mojo.getItemByNode(thing)
+    if thing = event.target.up(".thing")
+      item = @controller.get('list').mojo.getItemByNode(thing)
     
-    @drag.end.x = event.move.x
-    @drag.end.y = event.move.y
-    @drag.end.event_id = item.id
+      @drag.end.x = event.move.x
+      @drag.end.y = event.move.y
+      @drag.end.event_id = item.id
     
   dragEndHandler: (event) =>
-    @dragging = false
-    @drag = {}
+    if @dragging
+      @dragging = false
+      
+      if @drag.start.event_id is @drag.end.event_id
+        index = -1
+        _.each(@events.items, (ev, i) => index = i if ev.id is @drag.end.event_id)
+        
+        if @drag.start.x < (@drag.end.x - 50)
+          @markThingAsDone(index)
+        else if @drag.start.x > (@drag.end.x + 50)
+          @markThingAsUndone(index)
   
   markThingAsDone: (index) ->
     thing = @controller.get("list").mojo.getNodeByIndex(index)
@@ -306,9 +315,9 @@ class EventsAssistant extends BaseAssistant
       @dragging = false
       
       if @drag.start.event_id is @drag.end.event_id
-        if @drag.start.x < (@drag.end.x - 100)
+        if @drag.start.x < (@drag.end.x - 50)
           @markThingAsDone(event.index)
-        else if @drag.start.x > (@drag.end.x + 100)
+        else if @drag.start.x > (@drag.end.x + 50)
           @markThingAsUndone(event.index)
       
       return

@@ -79,7 +79,7 @@ body.palm-default {
   margin: 0px;
   overflow: auto;
   border-bottom: 1px solid #222222;
-  /*height: 48px;*/
+  height: 48px;
   -webkit-transition-property: height;
   -webkit-transition-duration: 0.5s;
   -webkit-transition-timing-function: 'ease-out';
@@ -91,6 +91,10 @@ body.palm-default {
   padding: 8px 0px 0px 14px;
   /*border: 1px solid blue;*/
   margin: 6px;
+}
+
+s {
+  color: gray !important;
 }
 
 .draggable-thingy {

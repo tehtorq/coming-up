@@ -88,7 +88,6 @@ EventsAssistant = (function() {
       itemTemplate: "events/event",
       swipeToDelete: false,
       hasNoWidgets: true,
-      initialAverageRowHeight: 48,
       reorderable: true,
       dividerFunction: this.dividerFunction,
       dividerTemplate: "events/divider-template",
@@ -142,29 +141,47 @@ EventsAssistant = (function() {
   };
   EventsAssistant.prototype.dragStartHandler = function(event) {
     var item, thing;
-    thing = event.target.up(".thing");
-    item = this.controller.get('list').mojo.getItemByNode(thing);
-    this.dragging = true;
-    return this.drag = {
-      start: {
-        x: event.down.x,
-        y: event.down.y,
-        event_id: item.id
-      },
-      end: {}
-    };
+    if (thing = event.target.up(".thing")) {
+      item = this.controller.get('list').mojo.getItemByNode(thing);
+      this.dragging = true;
+      return this.drag = {
+        start: {
+          x: event.down.x,
+          y: event.down.y,
+          event_id: item.id
+        },
+        end: {}
+      };
+    }
   };
   EventsAssistant.prototype.draggingHandler = function(event) {
     var item, thing;
-    thing = event.target.up(".thing");
-    item = this.controller.get('list').mojo.getItemByNode(thing);
-    this.drag.end.x = event.move.x;
-    this.drag.end.y = event.move.y;
-    return this.drag.end.event_id = item.id;
+    if (thing = event.target.up(".thing")) {
+      item = this.controller.get('list').mojo.getItemByNode(thing);
+      this.drag.end.x = event.move.x;
+      this.drag.end.y = event.move.y;
+      return this.drag.end.event_id = item.id;
+    }
   };
   EventsAssistant.prototype.dragEndHandler = function(event) {
-    this.dragging = false;
-    return this.drag = {};
+    var index;
+    if (this.dragging) {
+      this.dragging = false;
+      if (this.drag.start.event_id === this.drag.end.event_id) {
+        Banner.send("" + this.drag.start.event_id);
+        index = -1;
+        _.each(this.events.items, __bind(function(ev, i) {
+          if (ev.id === this.drag.end.event_id) {
+            return index = i;
+          }
+        }, this));
+        if (this.drag.start.x < (this.drag.end.x - 50)) {
+          return this.markThingAsDone(index);
+        } else if (this.drag.start.x > (this.drag.end.x + 50)) {
+          return this.markThingAsUndone(index);
+        }
+      }
+    }
   };
   EventsAssistant.prototype.markThingAsDone = function(index) {
     var el, event, thing;
@@ -346,9 +363,9 @@ EventsAssistant = (function() {
     if (this.dragging) {
       this.dragging = false;
       if (this.drag.start.event_id === this.drag.end.event_id) {
-        if (this.drag.start.x < (this.drag.end.x - 100)) {
+        if (this.drag.start.x < (this.drag.end.x - 50)) {
           this.markThingAsDone(event.index);
-        } else if (this.drag.start.x > (this.drag.end.x + 100)) {
+        } else if (this.drag.start.x > (this.drag.end.x + 50)) {
           this.markThingAsUndone(event.index);
         }
       }
