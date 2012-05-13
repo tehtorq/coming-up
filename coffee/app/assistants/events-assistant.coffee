@@ -44,7 +44,7 @@ class EventsAssistant extends BaseAssistant
     super
     
     @controller.setupWidget("bodyTextFieldId",
-      { focusMode : Mojo.Widget.focusAppendMode, multiline: true },
+      { focusMode : Mojo.Widget.focusAppendMode, multiline: true},
       @bodyModel
     )
     
@@ -90,10 +90,13 @@ class EventsAssistant extends BaseAssistant
     return @month_names[w.getMonth()]
       
     'later'
+    
+  aboutToActivate: ->
+    @hideEdit()
+    @controller.get('textFieldId').mojo.focus()
 
   activate: (event) ->
     super
-    @controller.get("edit-floater").hide()
     
     @addListeners(
       [@controller.get("list"), Mojo.Event.listTap, @itemTapped]
@@ -108,16 +111,24 @@ class EventsAssistant extends BaseAssistant
 
     if @events.items.length is 0
       @loadEvents()
+      
+  showEdit: ->
+    @controller.get("edit-floater").show()
+    @controller.get("edit-floater").style.opacity = 1
+    
+  hideEdit: ->
+    @controller.get("edit-floater").hide()
+    @controller.get("edit-floater").style.opacity = 0
 
   tapCancel: (event) =>
-    @controller.get("edit-floater").hide()
+    @hideEdit()
     
   tapOk: (event) =>
     @events.items[@editIndex].event = @controller.get('bodyTextFieldId').mojo.getValue()
     @saveEvents()
     @controller.get('list').mojo.noticeUpdatedItems(@editIndex, [@events.items[@editIndex]])
     @controller.get('bodyTextFieldId').mojo.setValue("")
-    @controller.get("edit-floater").hide()
+    @hideEdit()
           
   dragStartHandler: (event) =>  
     if thing = event.target.up(".thing")
@@ -338,11 +349,10 @@ class EventsAssistant extends BaseAssistant
         @controller.stageController.pushScene({name:"notes"}, {event: @events.items[event.index]})
       else if element_tapped.className.indexOf('option-edit') isnt -1
         @editIndex = event.index
-        @controller.get("edit-floater").show()
         text = @events.items[event.index].event
         @controller.get('bodyTextFieldId').mojo.setValue(text)
         Mojo.Log.info @controller.get('bodyTextFieldId').innerHTML
-        @controller.get("edit-floater").show()
+        @showEdit()
         @controller.get('bodyTextFieldId').mojo.focus()
         
       return
@@ -354,7 +364,7 @@ class EventsAssistant extends BaseAssistant
       
     if @selectedIndex?
       old_thing = @controller.get("list").mojo.getNodeByIndex(@selectedIndex) 
-      @deselectThing(old_thing) if old_thing.hasClassName("selected")
+      @deselectThing(old_thing) if old_thing?.hasClassName("selected")
       @selectedIndex = null
 
     @selectThing(thing)

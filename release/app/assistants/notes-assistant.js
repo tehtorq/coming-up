@@ -75,7 +75,7 @@ NotesAssistant = (function() {
       hintText: $L("Add a note"),
       enterSubmits: true,
       requiresEnterKey: true,
-      autoFocus: false
+      autoFocus: true
     }, this.model = {
       value: '',
       disabled: false
@@ -91,23 +91,26 @@ NotesAssistant = (function() {
       reorderable: true
     }, this.notes);
   };
+  NotesAssistant.prototype.aboutToActivate = function() {
+    return this.hideEdit();
+  };
   NotesAssistant.prototype.activate = function(event) {
     NotesAssistant.__super__.activate.apply(this, arguments);
-    this.controller.get("edit-floater").hide();
     this.addListeners([this.controller.get("list"), Mojo.Event.listTap, this.itemTapped], [this.controller.get("textFieldId"), Mojo.Event.propertyChange, this.textFieldChanged], [this.controller.get("list"), Mojo.Event.dragStart, this.dragStartHandler], [this.controller.get("list"), Mojo.Event.dragging, this.draggingHandler], [this.controller.get("list"), Mojo.Event.dragEnd, this.dragEndHandler], [this.controller.get("edit-cancel"), Mojo.Event.tap, this.tapCancel], [this.controller.get("edit-ok"), Mojo.Event.tap, this.tapOk]);
     if (this.notes.items.length === 0) {
       return this.loadNotes();
     }
   };
   NotesAssistant.prototype.tapCancel = function(event) {
-    return this.controller.get("edit-floater").hide();
+    this.hideEdit();
+    return this.controller.get('textFieldId').mojo.focus();
   };
   NotesAssistant.prototype.tapOk = function(event) {
     this.notes.items[this.editIndex].text = this.controller.get('bodyTextFieldId').mojo.getValue();
     this.saveNotes();
     this.controller.get('list').mojo.noticeUpdatedItems(this.editIndex, [this.notes.items[this.editIndex]]);
     this.controller.get('bodyTextFieldId').mojo.setValue("");
-    return this.controller.get("edit-floater").hide();
+    return this.hideEdit();
   };
   NotesAssistant.prototype.dragStartHandler = function(event) {
     var node, note;
@@ -187,6 +190,12 @@ NotesAssistant = (function() {
       return this.depot.get("notes" + this.event.id, this.handleLoadNotesResponse, __bind(function() {}, this));
     }, this), __bind(function() {}, this));
   };
+  NotesAssistant.prototype.showEdit = function() {
+    return this.controller.get("edit-floater").show();
+  };
+  NotesAssistant.prototype.hideEdit = function() {
+    return this.controller.get("edit-floater").hide();
+  };
   NotesAssistant.prototype.addNewNote = function(string) {
     Mojo.Log.info(string);
     this.notes.items.push({
@@ -237,7 +246,7 @@ NotesAssistant = (function() {
     return this.controller.modelChanged(this.notes);
   };
   NotesAssistant.prototype.itemTapped = function(event) {
-    var element_tapped, text;
+    var note;
     if (this.dragging) {
       this.dragging = false;
       if (this.drag.start.note_id === this.drag.end.note_id) {
@@ -249,13 +258,14 @@ NotesAssistant = (function() {
       }
       return;
     }
-    element_tapped = event.originalEvent.target;
+    note = this.notes.items[event.index];
+    if (note.crossed_off) {
+      return;
+    }
     this.editIndex = event.index;
-    this.controller.get("edit-floater").show();
-    text = this.notes.items[event.index].text;
-    this.controller.get('bodyTextFieldId').mojo.setValue(text);
+    this.controller.get('bodyTextFieldId').mojo.setValue(note.text);
     Mojo.Log.info(this.controller.get('bodyTextFieldId').innerHTML);
-    this.controller.get("edit-floater").show();
+    this.showEdit();
     return this.controller.get('bodyTextFieldId').mojo.focus();
   };
   NotesAssistant.prototype.handleCommand = function(event) {

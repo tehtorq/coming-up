@@ -61,7 +61,7 @@ body.palm-default {
   font-size: 16px;
   background-color: black;
   color: white;
-  padding: 0px 0px 0px 3px;
+  padding: 0px 3px 0px 3px;
   margin: 0px;
   overflow: auto;
   border-bottom: 1px solid #222222;
@@ -79,7 +79,7 @@ body.palm-default {
   margin: 0px;
   overflow: auto;
   border-bottom: 1px solid #222222;
-  height: 48px;
+  /*height: 48px;*/
   -webkit-transition-property: height;
   -webkit-transition-duration: 0.5s;
   -webkit-transition-timing-function: 'ease-out';
@@ -127,62 +127,53 @@ s {
 
 .event-holder {
   height: 36px;
-  width: 100%;
-  padding: 8px 0px 0px 14px;
+  width: 90%;
+  padding: 8px 0px 0px 10px;
   /*border: 1px solid blue;*/
   margin: 6px;
 }
 
 #bodyTextFieldId {
-  color: white;
-  border: 2px solid white;
-  margin: 15px 5px 5px 3px;
-  padding: 5px;
-  font-size: medium;
+  margin: 15px 5px 65px 5px !important;
+  padding: 0px !important;
+  -webkit-box-sizing: border-box !important;
+  overflow: hidden !important; 
+  max-height:240px !important;
 }
 
-#bodyTextFieldId .multiline-text {
-  color: white;
-  border: 1px solid blue;
-  margin: 5px !important;
+#bodyTextFieldId input, #bodyTextFieldId textarea {
+  color: gray !important;
+  border: 2px solid white !important;
+  margin: 0px !important;
   padding: 5px !important;
   min-height: 15px !important;
   right: 0px !important;
-  font-size: medium;
-}
-
-#bodyTextFieldId .text-edit {
-  color: white;
-  /*border: 1px solid yellow;*/
-  margin: 5px !important;
-  padding: 5px !important;
-  min-height: 15px !important;
-  right: 0px !important;
-  font-size: medium;
+  font-size: medium !important;
+  width: 100% !important;
+  -webkit-box-sizing: border-box !important;
+  left: 0px !important;
 }
 
 .floating {
+  -webkit-transition-property: opacity;
+  -webkit-transition-duration: 0.5s;
+  -webkit-transition-timing-function: 'ease-out';
   z-index: 999999;
-  /*width: 100%;*/
-  /*height: 50%;*/
   position: absolute;
   top: 20px;
-  bottom: 20px;
   left: 20px;
   right: 20px;
   background-color: black;
   color: white;
   border: 2px solid gray;
   -webkit-border-radius: 15px;
-}
-
-.floater-hidden {
-  left: -10px !important;
+  opacity: 0;
 }
 
 .floater-button-holder {
+  overflow: hidden;
   position: absolute;
-  height: 40px;
+  height: 60px;
   width: 100%;
   padding: 0px;
   margin: 0px;
@@ -191,14 +182,19 @@ s {
 }
 
 .floater-button {
+  -webkit-box-sizing: border-box;
   text-align: center;
-  font-size: 30px;
+  font-size: 25px;
   width: 50%;
-  padding: 0px;
+  padding: 10px 0px 0px 0px;
   margin: 0px;
   height: 100%;
   float: left;
   /*border-right: 2px solid white;*/
+}
+
+.floater-button-holder .floater-button:first-child {
+  border-right: 1px solid gray;
 }
 
 .textFieldClass {

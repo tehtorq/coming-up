@@ -121,23 +121,34 @@ EventsAssistant = (function() {
     return this.month_names[w.getMonth()];
     return 'later';
   };
+  EventsAssistant.prototype.aboutToActivate = function() {
+    this.hideEdit();
+    return this.controller.get('textFieldId').mojo.focus();
+  };
   EventsAssistant.prototype.activate = function(event) {
     EventsAssistant.__super__.activate.apply(this, arguments);
-    this.controller.get("edit-floater").hide();
     this.addListeners([this.controller.get("list"), Mojo.Event.listTap, this.itemTapped], [this.controller.get("list"), Mojo.Event.listDelete, this.handleDeleteItem], [this.controller.get("textFieldId"), Mojo.Event.propertyChange, this.textFieldChanged], [this.controller.get("list"), Mojo.Event.dragStart, this.dragStartHandler], [this.controller.get("list"), Mojo.Event.dragging, this.draggingHandler], [this.controller.get("list"), Mojo.Event.dragEnd, this.dragEndHandler], [this.controller.get("edit-cancel"), Mojo.Event.tap, this.tapCancel], [this.controller.get("edit-ok"), Mojo.Event.tap, this.tapOk]);
     if (this.events.items.length === 0) {
       return this.loadEvents();
     }
   };
+  EventsAssistant.prototype.showEdit = function() {
+    this.controller.get("edit-floater").show();
+    return this.controller.get("edit-floater").style.opacity = 1;
+  };
+  EventsAssistant.prototype.hideEdit = function() {
+    this.controller.get("edit-floater").hide();
+    return this.controller.get("edit-floater").style.opacity = 0;
+  };
   EventsAssistant.prototype.tapCancel = function(event) {
-    return this.controller.get("edit-floater").hide();
+    return this.hideEdit();
   };
   EventsAssistant.prototype.tapOk = function(event) {
     this.events.items[this.editIndex].event = this.controller.get('bodyTextFieldId').mojo.getValue();
     this.saveEvents();
     this.controller.get('list').mojo.noticeUpdatedItems(this.editIndex, [this.events.items[this.editIndex]]);
     this.controller.get('bodyTextFieldId').mojo.setValue("");
-    return this.controller.get("edit-floater").hide();
+    return this.hideEdit();
   };
   EventsAssistant.prototype.dragStartHandler = function(event) {
     var item, thing;
@@ -168,7 +179,6 @@ EventsAssistant = (function() {
     if (this.dragging) {
       this.dragging = false;
       if (this.drag.start.event_id === this.drag.end.event_id) {
-        Banner.send("" + this.drag.start.event_id);
         index = -1;
         _.each(this.events.items, __bind(function(ev, i) {
           if (ev.id === this.drag.end.event_id) {
@@ -390,11 +400,10 @@ EventsAssistant = (function() {
         });
       } else if (element_tapped.className.indexOf('option-edit') !== -1) {
         this.editIndex = event.index;
-        this.controller.get("edit-floater").show();
         text = this.events.items[event.index].event;
         this.controller.get('bodyTextFieldId').mojo.setValue(text);
         Mojo.Log.info(this.controller.get('bodyTextFieldId').innerHTML);
-        this.controller.get("edit-floater").show();
+        this.showEdit();
         this.controller.get('bodyTextFieldId').mojo.focus();
       }
       return;
@@ -406,7 +415,7 @@ EventsAssistant = (function() {
     }
     if (this.selectedIndex != null) {
       old_thing = this.controller.get("list").mojo.getNodeByIndex(this.selectedIndex);
-      if (old_thing.hasClassName("selected")) {
+      if (old_thing != null ? old_thing.hasClassName("selected") : void 0) {
         this.deselectThing(old_thing);
       }
       this.selectedIndex = null;

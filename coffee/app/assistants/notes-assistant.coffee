@@ -38,7 +38,7 @@ class NotesAssistant extends BaseAssistant
         hintText: $L("Add a note")
         enterSubmits: true
         requiresEnterKey: true
-        autoFocus: false
+        autoFocus: true
       @model =
         value: ''
         disabled: false
@@ -55,10 +55,12 @@ class NotesAssistant extends BaseAssistant
       # initialAverageRowHeight: 48
       reorderable: true
       }, @notes)
+      
+  aboutToActivate: ->
+    @hideEdit()
   
   activate: (event) ->
     super
-    @controller.get("edit-floater").hide()
     
     @addListeners(
       [@controller.get("list"), Mojo.Event.listTap, @itemTapped]
@@ -74,14 +76,15 @@ class NotesAssistant extends BaseAssistant
       @loadNotes()
       
   tapCancel: (event) =>
-    @controller.get("edit-floater").hide()
+    @hideEdit()
+    @controller.get('textFieldId').mojo.focus()
 
   tapOk: (event) =>
     @notes.items[@editIndex].text = @controller.get('bodyTextFieldId').mojo.getValue()
     @saveNotes()
     @controller.get('list').mojo.noticeUpdatedItems(@editIndex, [@notes.items[@editIndex]])
     @controller.get('bodyTextFieldId').mojo.setValue("")
-    @controller.get("edit-floater").hide()
+    @hideEdit()
       
   dragStartHandler: (event) =>
     if node = event.target.up(".note")
@@ -148,6 +151,12 @@ class NotesAssistant extends BaseAssistant
         @depot.get("notes#{@event.id}", @handleLoadNotesResponse, =>)
       =>
     )
+    
+  showEdit: ->
+    @controller.get("edit-floater").show()
+
+  hideEdit: ->
+    @controller.get("edit-floater").hide()
       
   addNewNote: (string) =>
     Mojo.Log.info string
@@ -201,15 +210,14 @@ class NotesAssistant extends BaseAssistant
           @markNoteAsUndone(event.index)
     
       return
-      
-    element_tapped = event.originalEvent.target
+    
+    note = @notes.items[event.index]
+    return if note.crossed_off
     
     @editIndex = event.index
-    @controller.get("edit-floater").show()
-    text = @notes.items[event.index].text
-    @controller.get('bodyTextFieldId').mojo.setValue(text)
+    @controller.get('bodyTextFieldId').mojo.setValue(note.text)
     Mojo.Log.info @controller.get('bodyTextFieldId').innerHTML
-    @controller.get("edit-floater").show()
+    @showEdit()
     @controller.get('bodyTextFieldId').mojo.focus()
       
   handleCommand: (event) ->
