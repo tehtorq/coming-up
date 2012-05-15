@@ -58,6 +58,7 @@ class NotesAssistant extends BaseAssistant
       
   aboutToActivate: ->
     @hideEdit()
+    @hideClearNotes()
   
   activate: (event) ->
     super
@@ -70,6 +71,9 @@ class NotesAssistant extends BaseAssistant
       [@controller.get("list"), Mojo.Event.dragEnd, @dragEndHandler]
       [@controller.get("edit-cancel"), Mojo.Event.tap, @tapCancel]
       [@controller.get("edit-ok"), Mojo.Event.tap, @tapOk]
+      [document, "shaking", @handleShake]
+      [@controller.get("clear-notes-cancel"), Mojo.Event.tap, @clearNotesCancelled]
+      [@controller.get("clear-notes-confirm"), Mojo.Event.tap, @clearNotesConfirmed]
     )
 
     if @notes.items.length is 0
@@ -136,6 +140,30 @@ class NotesAssistant extends BaseAssistant
         @controller.get('textFieldId').mojo.focus()
       10
     )
+    
+  handleShake: (event) =>
+    @showClearNotes()
+
+  clearNotesCancelled: =>
+    @hideClearNotes()
+
+  clearNotesConfirmed: =>
+    @clearNotes()
+    @hideClearNotes()
+
+  showClearNotes: ->
+    @controller.get("clear-notes-floater").show()
+
+  hideClearNotes: ->
+    @controller.get("clear-notes-floater").hide()
+    
+  clearNotes: ->
+    keep = _.select(@notes.items, (note) -> note.crossed_off isnt true)
+    
+    @notes.items = keep  
+    @controller.get("list").mojo.invalidateItems(0)
+    @controller.modelChanged(@notes)
+    @saveNotes()
     
   handleDeleteItem: (event) =>
     @notes.items.splice(event.index, 1)

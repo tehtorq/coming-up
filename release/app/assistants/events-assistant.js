@@ -28,6 +28,9 @@ EventsAssistant = (function() {
     this.dragStartHandler = __bind(this.dragStartHandler, this);
     this.tapOk = __bind(this.tapOk, this);
     this.tapCancel = __bind(this.tapCancel, this);
+    this.clearEventsConfirmed = __bind(this.clearEventsConfirmed, this);
+    this.clearEventsCancelled = __bind(this.clearEventsCancelled, this);
+    this.handleShake = __bind(this.handleShake, this);
     this.dividerFunction = __bind(this.dividerFunction, this);
     EventsAssistant.__super__.constructor.apply(this, arguments);
     this.events = {
@@ -123,24 +126,39 @@ EventsAssistant = (function() {
   };
   EventsAssistant.prototype.aboutToActivate = function() {
     this.hideEdit();
+    this.hideClearEvents();
     return this.controller.get('textFieldId').mojo.focus();
   };
   EventsAssistant.prototype.activate = function(event) {
     EventsAssistant.__super__.activate.apply(this, arguments);
-    this.addListeners([this.controller.get("list"), Mojo.Event.listTap, this.itemTapped], [this.controller.get("list"), Mojo.Event.listDelete, this.handleDeleteItem], [this.controller.get("textFieldId"), Mojo.Event.propertyChange, this.textFieldChanged], [this.controller.get("list"), Mojo.Event.dragStart, this.dragStartHandler], [this.controller.get("list"), Mojo.Event.dragging, this.draggingHandler], [this.controller.get("list"), Mojo.Event.dragEnd, this.dragEndHandler], [this.controller.get("edit-cancel"), Mojo.Event.tap, this.tapCancel], [this.controller.get("edit-ok"), Mojo.Event.tap, this.tapOk]);
+    this.addListeners([this.controller.get("list"), Mojo.Event.listTap, this.itemTapped], [this.controller.get("list"), Mojo.Event.listDelete, this.handleDeleteItem], [this.controller.get("textFieldId"), Mojo.Event.propertyChange, this.textFieldChanged], [this.controller.get("list"), Mojo.Event.dragStart, this.dragStartHandler], [this.controller.get("list"), Mojo.Event.dragging, this.draggingHandler], [this.controller.get("list"), Mojo.Event.dragEnd, this.dragEndHandler], [this.controller.get("edit-cancel"), Mojo.Event.tap, this.tapCancel], [this.controller.get("edit-ok"), Mojo.Event.tap, this.tapOk], [document, "shaking", this.handleShake], [this.controller.get("clear-events-cancel"), Mojo.Event.tap, this.clearEventsCancelled], [this.controller.get("clear-events-confirm"), Mojo.Event.tap, this.clearEventsConfirmed]);
     if (this.events.items.length === 0) {
       return this.loadEvents();
     }
   };
+  EventsAssistant.prototype.handleShake = function(event) {
+    return this.showClearEvents();
+  };
+  EventsAssistant.prototype.clearEventsCancelled = function() {
+    return this.hideClearEvents();
+  };
+  EventsAssistant.prototype.clearEventsConfirmed = function() {
+    this.clearEvents();
+    return this.hideClearEvents();
+  };
+  EventsAssistant.prototype.showClearEvents = function() {
+    return this.controller.get("clear-events-floater").show();
+  };
+  EventsAssistant.prototype.hideClearEvents = function() {
+    return this.controller.get("clear-events-floater").hide();
+  };
   EventsAssistant.prototype.showEdit = function() {
-    this.controller.get("edit-floater").show();
-    return this.controller.get("edit-floater").style.opacity = 1;
+    return this.controller.get("edit-floater").show();
   };
   EventsAssistant.prototype.hideEdit = function() {
-    this.controller.get("edit-floater").hide();
-    return this.controller.get("edit-floater").style.opacity = 0;
+    return this.controller.get("edit-floater").hide();
   };
-  EventsAssistant.prototype.tapCancel = function(event) {
+  EventsAssistant.prototype.tapCancel = function() {
     return this.hideEdit();
   };
   EventsAssistant.prototype.tapOk = function(event) {
@@ -192,6 +210,22 @@ EventsAssistant = (function() {
         }
       }
     }
+  };
+  EventsAssistant.prototype.clearEvents = function() {
+    var get_rid_of, keep;
+    keep = _.select(this.events.items, function(task) {
+      return task.crossed_off !== true;
+    });
+    get_rid_of = _.select(this.events.items, function(task) {
+      return task.crossed_off === true;
+    });
+    _.each(get_rid_of, __bind(function(task) {
+      return this.depot.remove("notes" + task.id);
+    }, this));
+    this.events.items = keep;
+    this.controller.get("list").mojo.invalidateItems(0);
+    this.controller.modelChanged(this.events);
+    return this.saveEvents();
   };
   EventsAssistant.prototype.markThingAsDone = function(index) {
     var el, event, thing;

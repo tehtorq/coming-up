@@ -93,6 +93,7 @@ class EventsAssistant extends BaseAssistant
     
   aboutToActivate: ->
     @hideEdit()
+    @hideClearEvents()
     @controller.get('textFieldId').mojo.focus()
 
   activate: (event) ->
@@ -107,20 +108,37 @@ class EventsAssistant extends BaseAssistant
       [@controller.get("list"), Mojo.Event.dragEnd, @dragEndHandler]
       [@controller.get("edit-cancel"), Mojo.Event.tap, @tapCancel]
       [@controller.get("edit-ok"), Mojo.Event.tap, @tapOk]
+      [document, "shaking", @handleShake]
+      [@controller.get("clear-events-cancel"), Mojo.Event.tap, @clearEventsCancelled]
+      [@controller.get("clear-events-confirm"), Mojo.Event.tap, @clearEventsConfirmed]
     )
 
     if @events.items.length is 0
       @loadEvents()
       
+  handleShake: (event) =>
+    @showClearEvents()
+    
+  clearEventsCancelled: =>
+    @hideClearEvents()
+    
+  clearEventsConfirmed: =>
+    @clearEvents()
+    @hideClearEvents()
+    
+  showClearEvents: ->
+    @controller.get("clear-events-floater").show()
+    
+  hideClearEvents: ->
+    @controller.get("clear-events-floater").hide()
+      
   showEdit: ->
     @controller.get("edit-floater").show()
-    @controller.get("edit-floater").style.opacity = 1
     
   hideEdit: ->
     @controller.get("edit-floater").hide()
-    @controller.get("edit-floater").style.opacity = 0
 
-  tapCancel: (event) =>
+  tapCancel: =>
     @hideEdit()
     
   tapOk: (event) =>
@@ -157,6 +175,18 @@ class EventsAssistant extends BaseAssistant
           @markThingAsDone(index)
         else if @drag.start.x > (@drag.end.x + 50)
           @markThingAsUndone(index)
+          
+  clearEvents: ->
+    keep = _.select(@events.items, (task) -> task.crossed_off isnt true)
+    get_rid_of = _.select(@events.items, (task) -> task.crossed_off is true)
+    
+    _.each get_rid_of, (task) =>
+      @depot.remove("notes#{task.id}")
+    
+    @events.items = keep  
+    @controller.get("list").mojo.invalidateItems(0)
+    @controller.modelChanged(@events)
+    @saveEvents()
   
   markThingAsDone: (index) ->
     thing = @controller.get("list").mojo.getNodeByIndex(index)

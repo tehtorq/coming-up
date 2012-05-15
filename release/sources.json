@@ -8,7 +8,6 @@
 		{"source": "app/models/preferences.js"},
 		{"source": "app/models/banner.js"},
     {"source": "app/assistants/base-assistant.js"},
-    {"source": "app/assistants/power-scroll-base.js"},
     {"source": "app/assistants/app-assistant.js"},
     {
         "scenes": "events",

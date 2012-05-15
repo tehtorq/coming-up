@@ -19,6 +19,9 @@ NotesAssistant = (function() {
     this.loadNotes = __bind(this.loadNotes, this);
     this.saveNotes = __bind(this.saveNotes, this);
     this.handleDeleteItem = __bind(this.handleDeleteItem, this);
+    this.clearNotesConfirmed = __bind(this.clearNotesConfirmed, this);
+    this.clearNotesCancelled = __bind(this.clearNotesCancelled, this);
+    this.handleShake = __bind(this.handleShake, this);
     this.textFieldChanged = __bind(this.textFieldChanged, this);
     this.dragEndHandler = __bind(this.dragEndHandler, this);
     this.draggingHandler = __bind(this.draggingHandler, this);
@@ -92,11 +95,12 @@ NotesAssistant = (function() {
     }, this.notes);
   };
   NotesAssistant.prototype.aboutToActivate = function() {
-    return this.hideEdit();
+    this.hideEdit();
+    return this.hideClearNotes();
   };
   NotesAssistant.prototype.activate = function(event) {
     NotesAssistant.__super__.activate.apply(this, arguments);
-    this.addListeners([this.controller.get("list"), Mojo.Event.listTap, this.itemTapped], [this.controller.get("textFieldId"), Mojo.Event.propertyChange, this.textFieldChanged], [this.controller.get("list"), Mojo.Event.dragStart, this.dragStartHandler], [this.controller.get("list"), Mojo.Event.dragging, this.draggingHandler], [this.controller.get("list"), Mojo.Event.dragEnd, this.dragEndHandler], [this.controller.get("edit-cancel"), Mojo.Event.tap, this.tapCancel], [this.controller.get("edit-ok"), Mojo.Event.tap, this.tapOk]);
+    this.addListeners([this.controller.get("list"), Mojo.Event.listTap, this.itemTapped], [this.controller.get("textFieldId"), Mojo.Event.propertyChange, this.textFieldChanged], [this.controller.get("list"), Mojo.Event.dragStart, this.dragStartHandler], [this.controller.get("list"), Mojo.Event.dragging, this.draggingHandler], [this.controller.get("list"), Mojo.Event.dragEnd, this.dragEndHandler], [this.controller.get("edit-cancel"), Mojo.Event.tap, this.tapCancel], [this.controller.get("edit-ok"), Mojo.Event.tap, this.tapOk], [document, "shaking", this.handleShake], [this.controller.get("clear-notes-cancel"), Mojo.Event.tap, this.clearNotesCancelled], [this.controller.get("clear-notes-confirm"), Mojo.Event.tap, this.clearNotesConfirmed]);
     if (this.notes.items.length === 0) {
       return this.loadNotes();
     }
@@ -175,6 +179,32 @@ NotesAssistant = (function() {
     return this.controller.window.setTimeout(__bind(function() {
       return this.controller.get('textFieldId').mojo.focus();
     }, this), 10);
+  };
+  NotesAssistant.prototype.handleShake = function(event) {
+    return this.showClearNotes();
+  };
+  NotesAssistant.prototype.clearNotesCancelled = function() {
+    return this.hideClearNotes();
+  };
+  NotesAssistant.prototype.clearNotesConfirmed = function() {
+    this.clearNotes();
+    return this.hideClearNotes();
+  };
+  NotesAssistant.prototype.showClearNotes = function() {
+    return this.controller.get("clear-notes-floater").show();
+  };
+  NotesAssistant.prototype.hideClearNotes = function() {
+    return this.controller.get("clear-notes-floater").hide();
+  };
+  NotesAssistant.prototype.clearNotes = function() {
+    var keep;
+    keep = _.select(this.notes.items, function(note) {
+      return note.crossed_off !== true;
+    });
+    this.notes.items = keep;
+    this.controller.get("list").mojo.invalidateItems(0);
+    this.controller.modelChanged(this.notes);
+    return this.saveNotes();
   };
   NotesAssistant.prototype.handleDeleteItem = function(event) {
     this.notes.items.splice(event.index, 1);

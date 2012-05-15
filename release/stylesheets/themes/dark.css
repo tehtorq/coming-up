@@ -155,9 +155,6 @@ s {
 }
 
 .floating {
-  -webkit-transition-property: opacity;
-  -webkit-transition-duration: 0.5s;
-  -webkit-transition-timing-function: 'ease-out';
   z-index: 999999;
   position: absolute;
   top: 20px;
@@ -167,7 +164,6 @@ s {
   color: white;
   border: 2px solid gray;
   -webkit-border-radius: 15px;
-  opacity: 0;
 }
 
 .floater-button-holder {
