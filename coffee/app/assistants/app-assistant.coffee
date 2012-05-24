@@ -1,4 +1,10 @@
+class Incoming
+
 class AppAssistant
+  
+  setup: ->
+    Incoming.Metrix = new Metrix() # instantiate metrix library
+    Incoming.Metrix.postDeviceData()
   
   handleLaunch: (launchParams) ->
     Mojo.Log.info(JSON.stringify(launchParams))

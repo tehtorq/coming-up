@@ -181,6 +181,10 @@ NotesAssistant = (function() {
     }, this), 10);
   };
   NotesAssistant.prototype.handleShake = function(event) {
+    if (this.controller.get("clear-notes-floater").visible()) {
+      return;
+    }
+    Mojo.Controller.getAppController().playSoundNotification("vibrate", "", 250);
     return this.showClearNotes();
   };
   NotesAssistant.prototype.clearNotesCancelled = function() {

@@ -137,6 +137,10 @@ EventsAssistant = (function() {
     }
   };
   EventsAssistant.prototype.handleShake = function(event) {
+    if (this.controller.get("clear-events-floater").visible()) {
+      return;
+    }
+    Mojo.Controller.getAppController().playSoundNotification("vibrate", "", 250);
     return this.showClearEvents();
   };
   EventsAssistant.prototype.clearEventsCancelled = function() {

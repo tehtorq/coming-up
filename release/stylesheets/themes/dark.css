@@ -155,6 +155,7 @@ s {
 }
 
 .floating {
+  margin-top: 50px;
   z-index: 999999;
   position: absolute;
   top: 20px;
@@ -204,6 +205,8 @@ s {
 }
 
 .textFieldClass input {
+  display: inline !important;
+  /*display: none;*/
   margin: 0px;
   padding: 5px 15px 5px 15px;
   -webkit-border-radius: 30px;

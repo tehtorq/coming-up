@@ -142,6 +142,8 @@ class NotesAssistant extends BaseAssistant
     )
     
   handleShake: (event) =>
+    return if @controller.get("clear-notes-floater").visible()
+    Mojo.Controller.getAppController().playSoundNotification("vibrate", "", 250)
     @showClearNotes()
 
   clearNotesCancelled: =>

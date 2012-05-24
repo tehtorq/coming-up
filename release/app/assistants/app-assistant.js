@@ -1,7 +1,15 @@
-var AppAssistant;
+var AppAssistant, Incoming;
 var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+Incoming = (function() {
+  function Incoming() {}
+  return Incoming;
+})();
 AppAssistant = (function() {
   function AppAssistant() {}
+  AppAssistant.prototype.setup = function() {
+    Incoming.Metrix = new Metrix();
+    return Incoming.Metrix.postDeviceData();
+  };
   AppAssistant.prototype.handleLaunch = function(launchParams) {
     var params, pushCard;
     Mojo.Log.info(JSON.stringify(launchParams));

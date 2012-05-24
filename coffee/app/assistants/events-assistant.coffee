@@ -117,6 +117,8 @@ class EventsAssistant extends BaseAssistant
       @loadEvents()
       
   handleShake: (event) =>
+    return if @controller.get("clear-events-floater").visible()
+    Mojo.Controller.getAppController().playSoundNotification("vibrate", "", 250)
     @showClearEvents()
     
   clearEventsCancelled: =>
