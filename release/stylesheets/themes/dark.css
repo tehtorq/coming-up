@@ -134,18 +134,23 @@ s {
 }
 
 #bodyTextFieldId {
+  min-height: 15px !important;
+  left: 0px !important;
+  right: 0px !important;
+  font-size: medium !important;
+  color: gray !important;
   margin: 15px 5px 65px 5px !important;
-  padding: 0px !important;
+  padding: 5px !important;
   -webkit-box-sizing: border-box !important;
   overflow: hidden !important; 
   max-height:240px !important;
+  border: 2px solid white !important;
 }
 
 #bodyTextFieldId input, #bodyTextFieldId textarea {
   color: gray !important;
-  border: 2px solid white !important;
   margin: 0px !important;
-  padding: 5px !important;
+  padding: 0px !important;
   min-height: 15px !important;
   right: 0px !important;
   font-size: medium !important;

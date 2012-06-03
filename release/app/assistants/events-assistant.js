@@ -467,9 +467,11 @@ EventsAssistant = (function() {
   };
   EventsAssistant.prototype.deselectThing = function(thing) {
     thing.removeClassName('selected');
-    if (thing.down(".event-options")) {
-      return thing.down(".event-options").remove();
-    }
+    return this.controller.window.setTimeout(__bind(function() {
+      if (thing.down(".event-options")) {
+        return thing.down(".event-options").remove();
+      }
+    }, this), 501);
   };
   EventsAssistant.prototype.addOptions = function(thing) {
     return thing.insert('<div class="event-options">\

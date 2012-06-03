@@ -408,7 +408,12 @@ class EventsAssistant extends BaseAssistant
     
   deselectThing: (thing) =>
     thing.removeClassName('selected')
-    thing.down(".event-options").remove() if thing.down(".event-options")
+    
+    @controller.window.setTimeout(
+      =>
+        thing.down(".event-options").remove() if thing.down(".event-options")
+      501
+    )
     
   addOptions: (thing) =>
     thing.insert('<div class="event-options">
