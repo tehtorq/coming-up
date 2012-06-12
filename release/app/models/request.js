@@ -29,10 +29,6 @@ Request = (function() {
     return this.request(url, 'get', params, token);
   };
   Request.prototype.post = function(url, params, token) {
-    if (params.uh == null) {
-      Banner.send("Not logged in.");
-      return;
-    }
     return this.request(url, 'post', params, token);
   };
   Request.prototype.handleResponse = function(token, response, success) {

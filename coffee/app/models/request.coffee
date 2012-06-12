@@ -26,10 +26,6 @@ class Request
     @request(url, 'get', params, token)
 
   post: (url, params, token) ->
-    unless params.uh?
-      Banner.send("Not logged in.")
-      return
-    
     @request(url, 'post', params, token)
 
   handleResponse: (token, response, success) ->

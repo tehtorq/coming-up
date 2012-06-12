@@ -11,7 +11,7 @@ class EventsAssistant extends BaseAssistant
     
   setupMenu: ->
     menu_items = [
-      # {label: "Preferences", command: Mojo.Menu.prefsCmd}
+      {label: "Preferences", command: Mojo.Menu.prefsCmd}
       {label: "About", command: 'about-scene'}
     ]
 
@@ -103,6 +103,7 @@ class EventsAssistant extends BaseAssistant
       [@controller.get("list"), Mojo.Event.listTap, @itemTapped]
       [@controller.get("list"), Mojo.Event.listDelete, @handleDeleteItem]
       [@controller.get("textFieldId"), Mojo.Event.propertyChange, @textFieldChanged]
+      [@controller.get("list"), Mojo.Event.listReorder, @handleReorder]
       [@controller.get("list"), Mojo.Event.dragStart, @dragStartHandler]
       [@controller.get("list"), Mojo.Event.dragging, @draggingHandler]
       [@controller.get("list"), Mojo.Event.dragEnd, @dragEndHandler]
@@ -116,6 +117,11 @@ class EventsAssistant extends BaseAssistant
     if @events.items.length is 0
       @loadEvents()
       
+  handleReorder: (event) =>
+    @events.items[event.fromIndex].when = @events.items[event.toIndex].when
+    @events.items.move(event.fromIndex, event.toIndex)
+    @saveEvents()
+  
   handleShake: (event) =>
     return if @controller.get("clear-events-floater").visible()
     Mojo.Controller.getAppController().playSoundNotification("vibrate", "", 250)
@@ -235,7 +241,7 @@ class EventsAssistant extends BaseAssistant
     @controller.window.setTimeout(
       =>
         @controller.get('textFieldId').mojo.focus()
-      10
+      100
     )
   
   whenFormatter: (propertyValue, model) =>
@@ -255,14 +261,24 @@ class EventsAssistant extends BaseAssistant
   
   saveEvents: ->
     @depot.add('events', JSON.stringify(@events.items))
+    
+    if AppAssistant.cookieValue("prefs-sync-enabled", "off") is "on"
+      new RemoteStorage(@).set @remoteStorageKey(), JSON.stringify(@events.items)
+    
+  remoteStorageKey: ->
+    "com_tehtorq_incoming_" + hex_md5(AppAssistant.cookieValue("prefs-sync-username", "") + AppAssistant.cookieValue("prefs-sync-password", ""))
       
   loadEvents: ->
-    @depot = new Mojo.Depot(
-      {name: 'events'}
-      =>
-        @depot.get('events', @handleLoadEventsResponse, =>)
-      =>
-    )
+    if AppAssistant.cookieValue("prefs-sync-enabled", "on") is "on"
+      new RemoteStorage(@).get @remoteStorageKey()
+      @depot = new Mojo.Depot({name: 'events'})
+    else
+      @depot = new Mojo.Depot(
+        {name: 'events'}
+        =>
+          @depot.get('events', @handleLoadEventsResponse, =>)
+        =>
+      )
     
   processDateString: (string) ->
     Date.parse(string).toString("yyyyMMdd");
@@ -318,11 +334,14 @@ class EventsAssistant extends BaseAssistant
     
   addNewEvent: (string) =>
     event = @processNewEvent(string)
-    Mojo.Log.info(JSON.stringify(event))
-    @events.items.push(event)
-    @events.items = _.sortBy @events.items, (item) -> item.when
-    @controller.get("list").mojo.invalidateItems(0)
-    @controller.modelChanged(@events)
+    
+    offset = 0
+    
+    for i in [0..(@events.items.length-1)]
+      offset = i+1 if event.when > @events.items[i].when
+        
+    @events.items.insert(event, offset)
+    @controller.get("list").mojo.noticeAddedItems(offset, [event])    
     @saveEvents()
   
   handleLoadEventsResponse: (response) =>
@@ -338,7 +357,7 @@ class EventsAssistant extends BaseAssistant
       
     # todo: sort events by time here...
     
-    @events.items = _.sortBy @events.items, (item) -> item.when
+    #@events.items = _.sortBy @events.items, (item) -> item.when
     @controller.modelChanged(@events)
     @saveEvents()
     
@@ -435,3 +454,11 @@ class EventsAssistant extends BaseAssistant
         AppAssistant.open_donation_link()
       when 'purchase-cmd'
         AppAssistant.open_purchase_link()
+        
+  handleCallback: (params) -> 
+    return params unless params? and params.success
+
+    switch params.type
+      when "remote-storage-get"
+        @handleLoadEventsResponse(params.response.responseText)
+  

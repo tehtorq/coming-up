@@ -22,7 +22,7 @@ class BaseAssistant
     @can_navigate_back and not Mojo.Environment.DeviceInfo.keyboardAvailable
     
   scrollToTop: ->
-    @controller.getSceneScroller().mojo.scrollTo(0,0, true)
+    @controller.get("list-scroller").mojo.scrollTo(0,0, true)
       
   addListeners: ->
     @listeners = arguments

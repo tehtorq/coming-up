@@ -30,5 +30,13 @@ AppAssistant = (function() {
       disableSceneScroller: true
     }, pushCard, "card");
   };
+  AppAssistant.cookieValue = function(cookieName, default_value) {
+    var cookie;
+    cookie = new Mojo.Model.Cookie(cookieName);
+    if (cookie != null) {
+      return cookie.get() || default_value;
+    }
+    return default_value;
+  };
   return AppAssistant;
 })();

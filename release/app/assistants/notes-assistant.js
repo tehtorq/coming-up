@@ -15,6 +15,7 @@ NotesAssistant = (function() {
     }
     this.itemTapped = __bind(this.itemTapped, this);
     this.handleLoadNotesResponse = __bind(this.handleLoadNotesResponse, this);
+    this.addNewEvent = __bind(this.addNewEvent, this);
     this.addNewNote = __bind(this.addNewNote, this);
     this.loadNotes = __bind(this.loadNotes, this);
     this.saveNotes = __bind(this.saveNotes, this);
@@ -28,6 +29,7 @@ NotesAssistant = (function() {
     this.dragStartHandler = __bind(this.dragStartHandler, this);
     this.tapOk = __bind(this.tapOk, this);
     this.tapCancel = __bind(this.tapCancel, this);
+    this.handleReorder = __bind(this.handleReorder, this);
     NotesAssistant.__super__.constructor.apply(this, arguments);
     this.notes = {
       items: []
@@ -100,10 +102,14 @@ NotesAssistant = (function() {
   };
   NotesAssistant.prototype.activate = function(event) {
     NotesAssistant.__super__.activate.apply(this, arguments);
-    this.addListeners([this.controller.get("list"), Mojo.Event.listTap, this.itemTapped], [this.controller.get("textFieldId"), Mojo.Event.propertyChange, this.textFieldChanged], [this.controller.get("list"), Mojo.Event.dragStart, this.dragStartHandler], [this.controller.get("list"), Mojo.Event.dragging, this.draggingHandler], [this.controller.get("list"), Mojo.Event.dragEnd, this.dragEndHandler], [this.controller.get("edit-cancel"), Mojo.Event.tap, this.tapCancel], [this.controller.get("edit-ok"), Mojo.Event.tap, this.tapOk], [document, "shaking", this.handleShake], [this.controller.get("clear-notes-cancel"), Mojo.Event.tap, this.clearNotesCancelled], [this.controller.get("clear-notes-confirm"), Mojo.Event.tap, this.clearNotesConfirmed]);
+    this.addListeners([this.controller.get("list"), Mojo.Event.listTap, this.itemTapped], [this.controller.get("textFieldId"), Mojo.Event.propertyChange, this.textFieldChanged], [this.controller.get("list"), Mojo.Event.listReorder, this.handleReorder], [this.controller.get("list"), Mojo.Event.dragStart, this.dragStartHandler], [this.controller.get("list"), Mojo.Event.dragging, this.draggingHandler], [this.controller.get("list"), Mojo.Event.dragEnd, this.dragEndHandler], [this.controller.get("edit-cancel"), Mojo.Event.tap, this.tapCancel], [this.controller.get("edit-ok"), Mojo.Event.tap, this.tapOk], [document, "shaking", this.handleShake], [this.controller.get("clear-notes-cancel"), Mojo.Event.tap, this.clearNotesCancelled], [this.controller.get("clear-notes-confirm"), Mojo.Event.tap, this.clearNotesConfirmed]);
     if (this.notes.items.length === 0) {
       return this.loadNotes();
     }
+  };
+  NotesAssistant.prototype.handleReorder = function(event) {
+    this.notes.items.move(event.fromIndex, event.toIndex);
+    return this.saveNotes();
   };
   NotesAssistant.prototype.tapCancel = function(event) {
     this.hideEdit();
@@ -178,7 +184,7 @@ NotesAssistant = (function() {
     }
     return this.controller.window.setTimeout(__bind(function() {
       return this.controller.get('textFieldId').mojo.focus();
-    }, this), 10);
+    }, this), 100);
   };
   NotesAssistant.prototype.handleShake = function(event) {
     if (this.controller.get("clear-notes-floater").visible()) {
@@ -215,14 +221,28 @@ NotesAssistant = (function() {
     return this.saveNotes();
   };
   NotesAssistant.prototype.saveNotes = function() {
-    return this.depot.add("notes" + this.event.id, JSON.stringify(this.notes.items));
+    var key;
+    this.depot.add("notes" + this.event.id, JSON.stringify(this.notes.items));
+    if (AppAssistant.cookieValue("prefs-sync-enabled", "off") === "on") {
+      key = "com_tehtorq_incoming_" + hex_md5(AppAssistant.cookieValue("prefs-sync-username", "") + AppAssistant.cookieValue("prefs-sync-password", "")) + ("_notes" + this.event.id);
+      return new RemoteStorage(this).set(key, JSON.stringify(this.notes.items));
+    }
   };
   NotesAssistant.prototype.loadNotes = function() {
-    return this.depot = new Mojo.Depot({
-      name: "notes" + this.event.id
-    }, __bind(function() {
-      return this.depot.get("notes" + this.event.id, this.handleLoadNotesResponse, __bind(function() {}, this));
-    }, this), __bind(function() {}, this));
+    var key;
+    if (AppAssistant.cookieValue("prefs-sync-enabled", "off") === "on") {
+      key = "com_tehtorq_incoming_" + hex_md5(AppAssistant.cookieValue("prefs-sync-username", "") + AppAssistant.cookieValue("prefs-sync-password", "")) + ("_notes" + this.event.id);
+      new RemoteStorage(this).get(key);
+      return this.depot = new Mojo.Depot({
+        name: "notes" + this.event.id
+      });
+    } else {
+      return this.depot = new Mojo.Depot({
+        name: "notes" + this.event.id
+      }, __bind(function() {
+        return this.depot.get("notes" + this.event.id, this.handleLoadNotesResponse, __bind(function() {}, this));
+      }, this), __bind(function() {}, this));
+    }
   };
   NotesAssistant.prototype.showEdit = function() {
     return this.controller.get("edit-floater").show();
@@ -231,15 +251,29 @@ NotesAssistant = (function() {
     return this.controller.get("edit-floater").hide();
   };
   NotesAssistant.prototype.addNewNote = function(string) {
-    Mojo.Log.info(string);
-    this.notes.items.push({
+    var note, offset;
+    offset = this.notes.items.length;
+    note = {
       text: string,
       event_id: this.event.id,
       id: new Date().getTime()
-    });
-    this.controller.get("list").mojo.invalidateItems(0);
-    this.controller.modelChanged(this.notes);
+    };
+    this.notes.items.push(note);
+    this.controller.get("list").mojo.noticeAddedItems(offset, [note]);
     return this.saveNotes();
+  };
+  NotesAssistant.prototype.addNewEvent = function(string) {
+    var event, i, offset, _ref;
+    event = this.processNewEvent(string);
+    offset = 0;
+    for (i = 0, _ref = this.events.items.length - 1; 0 <= _ref ? i <= _ref : i >= _ref; 0 <= _ref ? i++ : i--) {
+      if (event.when > this.events.items[i].when) {
+        offset = i + 1;
+      }
+    }
+    this.events.items.insert(event, offset);
+    this.controller.get("list").mojo.noticeAddedItems(offset, [event]);
+    return this.saveEvents();
   };
   NotesAssistant.prototype.markNoteAsDone = function(index) {
     var el, node, note;
@@ -317,6 +351,15 @@ NotesAssistant = (function() {
         return AppAssistant.open_donation_link();
       case 'purchase-cmd':
         return AppAssistant.open_purchase_link();
+    }
+  };
+  NotesAssistant.prototype.handleCallback = function(params) {
+    if (!((params != null) && params.success)) {
+      return params;
+    }
+    switch (params.type) {
+      case "remote-storage-get":
+        return this.handleLoadNotesResponse(params.response.responseText);
     }
   };
   return NotesAssistant;

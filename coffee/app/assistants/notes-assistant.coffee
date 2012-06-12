@@ -66,6 +66,7 @@ class NotesAssistant extends BaseAssistant
     @addListeners(
       [@controller.get("list"), Mojo.Event.listTap, @itemTapped]
       [@controller.get("textFieldId"), Mojo.Event.propertyChange, @textFieldChanged]
+      [@controller.get("list"), Mojo.Event.listReorder, @handleReorder]
       [@controller.get("list"), Mojo.Event.dragStart, @dragStartHandler]
       [@controller.get("list"), Mojo.Event.dragging, @draggingHandler]
       [@controller.get("list"), Mojo.Event.dragEnd, @dragEndHandler]
@@ -78,6 +79,10 @@ class NotesAssistant extends BaseAssistant
 
     if @notes.items.length is 0
       @loadNotes()
+      
+  handleReorder: (event) =>
+    @notes.items.move(event.fromIndex, event.toIndex)
+    @saveNotes()
       
   tapCancel: (event) =>
     @hideEdit()
@@ -138,7 +143,7 @@ class NotesAssistant extends BaseAssistant
     @controller.window.setTimeout(
       =>
         @controller.get('textFieldId').mojo.focus()
-      10
+      100
     )
     
   handleShake: (event) =>
@@ -174,13 +179,23 @@ class NotesAssistant extends BaseAssistant
   saveNotes: =>
     @depot.add("notes#{@event.id}", JSON.stringify(@notes.items))
     
+    if AppAssistant.cookieValue("prefs-sync-enabled", "off") is "on"
+      key = "com_tehtorq_incoming_" + hex_md5(AppAssistant.cookieValue("prefs-sync-username", "") + AppAssistant.cookieValue("prefs-sync-password", "")) + "_notes#{@event.id}"
+      new RemoteStorage(@).set key, JSON.stringify(@notes.items)
+    
   loadNotes: =>
-    @depot = new Mojo.Depot(
-      {name: "notes#{@event.id}"}
-      =>
-        @depot.get("notes#{@event.id}", @handleLoadNotesResponse, =>)
-      =>
-    )
+    if AppAssistant.cookieValue("prefs-sync-enabled", "off") is "on"
+      key = "com_tehtorq_incoming_" + hex_md5(AppAssistant.cookieValue("prefs-sync-username", "") + AppAssistant.cookieValue("prefs-sync-password", "")) + "_notes#{@event.id}"
+      new RemoteStorage(@).get key
+      
+      @depot = new Mojo.Depot({name: "notes#{@event.id}"})
+    else
+      @depot = new Mojo.Depot(
+        {name: "notes#{@event.id}"}
+        =>
+          @depot.get("notes#{@event.id}", @handleLoadNotesResponse, =>)
+        =>
+      )
     
   showEdit: ->
     @controller.get("edit-floater").show()
@@ -189,11 +204,23 @@ class NotesAssistant extends BaseAssistant
     @controller.get("edit-floater").hide()
       
   addNewNote: (string) =>
-    Mojo.Log.info string
-    @notes.items.push({text: string, event_id: @event.id, id: new Date().getTime()})
-    @controller.get("list").mojo.invalidateItems(0)
-    @controller.modelChanged(@notes)
+    offset = @notes.items.length
+    note = {text: string, event_id: @event.id, id: new Date().getTime()}
+    @notes.items.push(note)
+    @controller.get("list").mojo.noticeAddedItems(offset, [note])
     @saveNotes()
+    
+  addNewEvent: (string) =>
+    event = @processNewEvent(string)
+
+    offset = 0
+
+    for i in [0..(@events.items.length-1)]
+      offset = i+1 if event.when > @events.items[i].when
+
+    @events.items.insert(event, offset)
+    @controller.get("list").mojo.noticeAddedItems(offset, [event])    
+    @saveEvents()
     
   markNoteAsDone: (index) ->
     node = @controller.get("list").mojo.getNodeByIndex(index)
@@ -262,3 +289,10 @@ class NotesAssistant extends BaseAssistant
         AppAssistant.open_donation_link()
       when 'purchase-cmd'
         AppAssistant.open_purchase_link()
+        
+  handleCallback: (params) ->    
+    return params unless params? and params.success
+
+    switch params.type
+      when "remote-storage-get"
+        @handleLoadNotesResponse(params.response.responseText)

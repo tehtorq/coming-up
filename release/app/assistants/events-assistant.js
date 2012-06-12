@@ -31,6 +31,7 @@ EventsAssistant = (function() {
     this.clearEventsConfirmed = __bind(this.clearEventsConfirmed, this);
     this.clearEventsCancelled = __bind(this.clearEventsCancelled, this);
     this.handleShake = __bind(this.handleShake, this);
+    this.handleReorder = __bind(this.handleReorder, this);
     this.dividerFunction = __bind(this.dividerFunction, this);
     EventsAssistant.__super__.constructor.apply(this, arguments);
     this.events = {
@@ -46,6 +47,9 @@ EventsAssistant = (function() {
     var menu_items;
     menu_items = [
       {
+        label: "Preferences",
+        command: Mojo.Menu.prefsCmd
+      }, {
         label: "About",
         command: 'about-scene'
       }
@@ -131,10 +135,15 @@ EventsAssistant = (function() {
   };
   EventsAssistant.prototype.activate = function(event) {
     EventsAssistant.__super__.activate.apply(this, arguments);
-    this.addListeners([this.controller.get("list"), Mojo.Event.listTap, this.itemTapped], [this.controller.get("list"), Mojo.Event.listDelete, this.handleDeleteItem], [this.controller.get("textFieldId"), Mojo.Event.propertyChange, this.textFieldChanged], [this.controller.get("list"), Mojo.Event.dragStart, this.dragStartHandler], [this.controller.get("list"), Mojo.Event.dragging, this.draggingHandler], [this.controller.get("list"), Mojo.Event.dragEnd, this.dragEndHandler], [this.controller.get("edit-cancel"), Mojo.Event.tap, this.tapCancel], [this.controller.get("edit-ok"), Mojo.Event.tap, this.tapOk], [document, "shaking", this.handleShake], [this.controller.get("clear-events-cancel"), Mojo.Event.tap, this.clearEventsCancelled], [this.controller.get("clear-events-confirm"), Mojo.Event.tap, this.clearEventsConfirmed]);
+    this.addListeners([this.controller.get("list"), Mojo.Event.listTap, this.itemTapped], [this.controller.get("list"), Mojo.Event.listDelete, this.handleDeleteItem], [this.controller.get("textFieldId"), Mojo.Event.propertyChange, this.textFieldChanged], [this.controller.get("list"), Mojo.Event.listReorder, this.handleReorder], [this.controller.get("list"), Mojo.Event.dragStart, this.dragStartHandler], [this.controller.get("list"), Mojo.Event.dragging, this.draggingHandler], [this.controller.get("list"), Mojo.Event.dragEnd, this.dragEndHandler], [this.controller.get("edit-cancel"), Mojo.Event.tap, this.tapCancel], [this.controller.get("edit-ok"), Mojo.Event.tap, this.tapOk], [document, "shaking", this.handleShake], [this.controller.get("clear-events-cancel"), Mojo.Event.tap, this.clearEventsCancelled], [this.controller.get("clear-events-confirm"), Mojo.Event.tap, this.clearEventsConfirmed]);
     if (this.events.items.length === 0) {
       return this.loadEvents();
     }
+  };
+  EventsAssistant.prototype.handleReorder = function(event) {
+    this.events.items[event.fromIndex].when = this.events.items[event.toIndex].when;
+    this.events.items.move(event.fromIndex, event.toIndex);
+    return this.saveEvents();
   };
   EventsAssistant.prototype.handleShake = function(event) {
     if (this.controller.get("clear-events-floater").visible()) {
@@ -277,7 +286,7 @@ EventsAssistant = (function() {
     }
     return this.controller.window.setTimeout(__bind(function() {
       return this.controller.get('textFieldId').mojo.focus();
-    }, this), 10);
+    }, this), 100);
   };
   EventsAssistant.prototype.whenFormatter = function(propertyValue, model) {
     var string, w;
@@ -299,14 +308,27 @@ EventsAssistant = (function() {
     return this.saveEvents();
   };
   EventsAssistant.prototype.saveEvents = function() {
-    return this.depot.add('events', JSON.stringify(this.events.items));
+    this.depot.add('events', JSON.stringify(this.events.items));
+    if (AppAssistant.cookieValue("prefs-sync-enabled", "off") === "on") {
+      return new RemoteStorage(this).set(this.remoteStorageKey(), JSON.stringify(this.events.items));
+    }
+  };
+  EventsAssistant.prototype.remoteStorageKey = function() {
+    return "com_tehtorq_incoming_" + hex_md5(AppAssistant.cookieValue("prefs-sync-username", "") + AppAssistant.cookieValue("prefs-sync-password", ""));
   };
   EventsAssistant.prototype.loadEvents = function() {
-    return this.depot = new Mojo.Depot({
-      name: 'events'
-    }, __bind(function() {
-      return this.depot.get('events', this.handleLoadEventsResponse, __bind(function() {}, this));
-    }, this), __bind(function() {}, this));
+    if (AppAssistant.cookieValue("prefs-sync-enabled", "on") === "on") {
+      new RemoteStorage(this).get(this.remoteStorageKey());
+      return this.depot = new Mojo.Depot({
+        name: 'events'
+      });
+    } else {
+      return this.depot = new Mojo.Depot({
+        name: 'events'
+      }, __bind(function() {
+        return this.depot.get('events', this.handleLoadEventsResponse, __bind(function() {}, this));
+      }, this), __bind(function() {}, this));
+    }
   };
   EventsAssistant.prototype.processDateString = function(string) {
     return Date.parse(string).toString("yyyyMMdd");
@@ -366,15 +388,16 @@ EventsAssistant = (function() {
     };
   };
   EventsAssistant.prototype.addNewEvent = function(string) {
-    var event;
+    var event, i, offset, _ref;
     event = this.processNewEvent(string);
-    Mojo.Log.info(JSON.stringify(event));
-    this.events.items.push(event);
-    this.events.items = _.sortBy(this.events.items, function(item) {
-      return item.when;
-    });
-    this.controller.get("list").mojo.invalidateItems(0);
-    this.controller.modelChanged(this.events);
+    offset = 0;
+    for (i = 0, _ref = this.events.items.length - 1; 0 <= _ref ? i <= _ref : i >= _ref; 0 <= _ref ? i++ : i--) {
+      if (event.when > this.events.items[i].when) {
+        offset = i + 1;
+      }
+    }
+    this.events.items.insert(event, offset);
+    this.controller.get("list").mojo.noticeAddedItems(offset, [event]);
     return this.saveEvents();
   };
   EventsAssistant.prototype.handleLoadEventsResponse = function(response) {
@@ -388,9 +411,6 @@ EventsAssistant = (function() {
       Mojo.Log.info(JSON.stringify(event));
       this.events.items.push(event);
     }
-    this.events.items = _.sortBy(this.events.items, function(item) {
-      return item.when;
-    });
     this.controller.modelChanged(this.events);
     return this.saveEvents();
   };
@@ -498,6 +518,15 @@ EventsAssistant = (function() {
         return AppAssistant.open_donation_link();
       case 'purchase-cmd':
         return AppAssistant.open_purchase_link();
+    }
+  };
+  EventsAssistant.prototype.handleCallback = function(params) {
+    if (!((params != null) && params.success)) {
+      return params;
+    }
+    switch (params.type) {
+      case "remote-storage-get":
+        return this.handleLoadEventsResponse(params.response.responseText);
     }
   };
   return EventsAssistant;

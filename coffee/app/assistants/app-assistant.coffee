@@ -17,3 +17,10 @@ class AppAssistant
 
     Mojo.Controller.getAppController().createStageWithCallback({name: "events", disableSceneScroller: true}, pushCard, "card")
         
+  @cookieValue: (cookieName, default_value) ->
+    cookie = new Mojo.Model.Cookie(cookieName)
+
+    if cookie?
+      return cookie.get() or default_value
+
+    default_value

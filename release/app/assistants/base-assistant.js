@@ -21,7 +21,7 @@ BaseAssistant = (function() {
     return this.can_navigate_back && !Mojo.Environment.DeviceInfo.keyboardAvailable;
   };
   BaseAssistant.prototype.scrollToTop = function() {
-    return this.controller.getSceneScroller().mojo.scrollTo(0, 0, true);
+    return this.controller.get("list-scroller").mojo.scrollTo(0, 0, true);
   };
   BaseAssistant.prototype.addListeners = function() {
     this.listeners = arguments;
